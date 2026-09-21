@@ -1,0 +1,903 @@
+# ============================================================
+#  SIGTI - REPARADOR COMPLETO DEL BACKEND (Pasos 2 y 3)
+#  Reconstruye: config/, core/ (10 archivos), api/auth/, .htaccess
+# ============================================================
+
+ $base = 'C:\xampp\htdocs\Plataforma-Servicio-TI'
+ $utf8 = New-Object System.Text.UTF8Encoding($false)   # UTF-8 SIN BOM (vital para PHP)
+
+Write-Host "`n=== 1. DIAGNOSTICO: que hay hoy en la raiz ===" -ForegroundColor Cyan
+if (-not (Test-Path $base)) { Write-Host "La carpeta $base NO existe" -ForegroundColor Red; exit }
+Get-ChildItem $base | Select-Object -ExpandProperty Name
+Write-Host "`nBuscando bootstrap.php en cualquier subcarpeta..."
+Get-ChildItem $base -Recurse -Filter 'bootstrap.php' -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "  Encontrado en: $($_.FullName)" -ForegroundColor Yellow }
+
+Write-Host "`n=== 2. Creando estructura de carpetas ===" -ForegroundColor Cyan
+foreach ($c in @('config','core','db','api\auth','views\dashboard','assets\css','assets\js\core','storage')) {
+    $ruta = Join-Path $base $c
+    if (-not (Test-Path $ruta)) { New-Item -ItemType Directory -Path $ruta -Force | Out-Null; Write-Host "  creada: $c" -ForegroundColor Green }
+}
+
+Write-Host "`n=== 3. Escribiendo archivos del backend ===" -ForegroundColor Cyan
+
+# ---------------- config/config.php ----------------
+ $config = @'
+<?php
+// ============================================================
+// SIGTI - Configuracion global
+// ============================================================
+
+// ---- Base de datos (ajustar si tu MySQL tiene contrasena) ----
+define('DB_HOST', '127.0.0.1');
+define('DB_NAME', 'sigti');
+define('DB_USER', 'root');
+define('DB_PASS', '');              // XAMPP/WAMP por defecto: vacia
+define('DB_CHARSET', 'utf8mb4');
+
+// ---- Aplicacion ----
+define('APP_NAME', 'SIGTI');
+define('ROOT_PATH', dirname(__DIR__));       // raiz del proyecto (dinamico)
+
+// BASE_URL autodetectada: usa el nombre REAL de la carpeta del disco.
+// Funciona con cualquier nombre de carpeta, sin editar nunca mas este archivo.
+ $nombreCarpeta = basename(str_replace('\\', '/', ROOT_PATH));
+define('BASE_URL', '/' . $nombreCarpeta . '/');
+
+define('STORAGE_PATH', ROOT_PATH . '/storage');
+
+// ---- Seguridad ----
+define('MAX_INTENTOS_LOGIN', 5);
+define('SESSION_TIMEOUT_MIN', 120);
+define('HASH_ALGO', PASSWORD_BCRYPT);
+
+// ---- Entorno ----
+error_reporting(E_ALL);
+ini_set('display_errors', '1');              // en produccion cambiar a '0'
+date_default_timezone_set('America/Lima');
+'@
+[IO.File]::WriteAllText("$base\config\config.php", $config, $utf8); Write-Host "  OK: config\config.php" -ForegroundColor Green
+
+# ---------------- core/bootstrap.php ----------------
+ $bootstrap = @'
+<?php
+// ============================================================
+// SIGTI - Arranque del sistema
+// TODOS los endpoints API comienzan con:
+//   require_once __DIR__ . '/../../core/bootstrap.php';
+// ============================================================
+require_once dirname(__DIR__) . '/config/config.php';
+
+// ---- Autoload de Composer (si existe) ----
+ $vendorAutoload = ROOT_PATH . '/vendor/autoload.php';
+if (is_file($vendorAutoload)) {
+    require_once $vendorAutoload;
+}
+
+// ---- Autocarga de respaldo: core/, models/ y services/ ----
+spl_autoload_register(function (string $clase): void {
+    foreach (['core', 'models', 'services'] as $dir) {
+        $archivo = ROOT_PATH . '/' . $dir . '/' . $clase . '.php';
+        if (is_file($archivo)) {
+            require_once $archivo;
+            if (!class_exists($clase, false) && !interface_exists($clase, false)) {
+                throw new RuntimeException(
+                    "SIGTI: el archivo existe ($archivo) pero NO declara 'class $clase'."
+                );
+            }
+            return;
+        }
+    }
+    throw new RuntimeException(
+        "SIGTI: no se encontro la clase '$clase'. Se busco: " .
+        ROOT_PATH . "/core/$clase.php (tambien en /models y /services). " .
+        "Verifique nombre exacto: sin tildes, sin espacios, extension .php."
+    );
+});
+
+// ---- Excepciones sin capturar -> respuesta clara ----
+set_exception_handler(function (Throwable $e): void {
+    error_log('[SIGTI] ' . $e->getMessage() . ' | ' . $e->getFile() . ':' . $e->getLine());
+    $uri  = $_SERVER['REQUEST_URI'] ?? '';
+    $ajax = (strpos($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '', 'XMLHttpRequest') !== false)
+         || (strpos($uri, '/api/')   !== false)
+         || (strpos($uri, '/views/') !== false);
+    http_response_code(500);
+    if ($ajax) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'success' => false,
+            'message' => 'Error interno: ' . $e->getMessage(),
+            'data'    => null,
+            'errors'  => null,
+        ], JSON_UNESCAPED_UNICODE);
+    } else {
+        echo '<div style="font-family:monospace;padding:24px;color:#b91c1c;background:#fef2f2;'
+           . 'border:1px solid #fecaca;border-radius:8px;max-width:860px;margin:24px">'
+           . '<b>Error SIGTI:</b> ' . htmlspecialchars($e->getMessage())
+           . '<br><br><small>En: ' . htmlspecialchars($e->getFile())
+           . ' &middot; linea ' . $e->getLine() . '</small></div>';
+    }
+    exit;
+});
+
+// ---- La sesion SIEMPRE iniciada en cada peticion ----
+Auth::startSession();
+'@
+[IO.File]::WriteAllText("$base\core\bootstrap.php", $bootstrap, $utf8); Write-Host "  OK: core\bootstrap.php" -ForegroundColor Green
+
+# ---------------- core/Database.php ----------------
+ $database = @'
+<?php
+// ============================================================
+// SIGTI - Conexion PDO (singleton) + helpers de CRUD
+// ============================================================
+
+class Database
+{
+    private static ?PDO $conn = null;
+
+    public static function conn(): PDO
+    {
+        if (self::$conn === null) {
+            $dsn = 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=' . DB_CHARSET;
+            self::$conn = new PDO($dsn, DB_USER, DB_PASS, [
+                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES   => false,
+            ]);
+        }
+        return self::$conn;
+    }
+
+    public static function run(string $sql, array $params = []): PDOStatement
+    {
+        $stmt = self::conn()->prepare($sql);
+        $stmt->execute($params);
+        return $stmt;
+    }
+
+    public static function get(string $sql, array $params = []): array
+    {
+        return self::run($sql, $params)->fetchAll();
+    }
+
+    public static function getOne(string $sql, array $params = []): ?array
+    {
+        $fila = self::run($sql, $params)->fetch();
+        return $fila === false ? null : $fila;
+    }
+
+    public static function getValue(string $sql, array $params = [])
+    {
+        $valor = self::run($sql, $params)->fetchColumn();
+        return $valor === false ? null : $valor;
+    }
+
+    public static function insert(string $tabla, array $datos): int
+    {
+        $columnas = self::soloColumnasSeguras(array_keys($datos));
+        $marcadores = implode(', ', array_map(fn($c) => ":$c", $columnas));
+        $sql = "INSERT INTO $tabla (" . implode(', ', $columnas) . ") VALUES ($marcadores)";
+        $params = [];
+        foreach ($columnas as $c) $params[":$c"] = $datos[$c];
+        self::run($sql, $params);
+        return (int) self::conn()->lastInsertId();
+    }
+
+    public static function update(string $tabla, array $datos, string $where, array $whereParams = []): int
+    {
+        $columnas = self::soloColumnasSeguras(array_keys($datos));
+        $set = implode(', ', array_map(fn($c) => "$c = :set_$c", $columnas));
+        $sql = "UPDATE $tabla SET $set WHERE $where";
+        $params = [];
+        foreach ($columnas as $c) $params[":set_$c"] = $datos[$c];
+        foreach ($whereParams as $i => $valor) {
+            $sql = preg_replace('/\?/', ":w$i", $sql, 1);
+            $params[":w$i"] = $valor;
+        }
+        return self::run($sql, $params)->rowCount();
+    }
+
+    public static function delete(string $tabla, string $where, array $params = []): int
+    {
+        return self::run("DELETE FROM $tabla WHERE $where", $params)->rowCount();
+    }
+
+    public static function begin(): void  { self::conn()->beginTransaction(); }
+    public static function commit(): void { self::conn()->commit(); }
+    public static function rollback(): void {
+        if (self::conn()->inTransaction()) self::conn()->rollBack();
+    }
+
+    private static function soloColumnasSeguras(array $columnas): array
+    {
+        $limpias = array_values(array_filter(
+            $columnas,
+            fn($c) => is_string($c) && preg_match('/^[a-zA-Z0-9_]+$/', $c)
+        ));
+        if (empty($limpias)) {
+            throw new InvalidArgumentException('Insert/Update sin columnas validas.');
+        }
+        return $limpias;
+    }
+}
+'@
+[IO.File]::WriteAllText("$base\core\Database.php", $database, $utf8); Write-Host "  OK: core\Database.php" -ForegroundColor Green
+
+# ---------------- core/Response.php ----------------
+ $response = @'
+<?php
+// ============================================================
+// SIGTI - Estandariza TODAS las respuestas JSON del sistema
+// ============================================================
+
+class Response
+{
+    private static function json(array $arr, int $code = 200): void
+    {
+        http_response_code($code);
+        header('Content-Type: application/json; charset=utf-8');
+        header('Cache-Control: no-store');
+        echo json_encode($arr, JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    public static function ok($data = null, string $message = 'Operacion realizada correctamente'): void
+    {
+        self::json(['success' => true, 'message' => $message, 'data' => $data, 'errors' => null]);
+    }
+
+    public static function error(string $message = 'Error en la operacion', ?array $errors = null, int $code = 400): void
+    {
+        self::json(['success' => false, 'message' => $message, 'data' => null, 'errors' => $errors], $code);
+    }
+
+    public static function noAuth(string $message = 'Sesion no iniciada o expirada'): void
+    {
+        self::error($message, null, 401);
+    }
+
+    public static function forbidden(string $message = 'No tiene permisos para esta accion'): void
+    {
+        self::error($message, null, 403);
+    }
+
+    public static function errorCsrf(): void
+    {
+        self::error('Token de seguridad invalido. Recargue la pagina e intente de nuevo.', null, 419);
+    }
+
+    public static function validation(array $errors): void
+    {
+        self::error('Datos invalidos. Revise el formulario.', $errors, 422);
+    }
+
+    public static function exception(string $mensajeTecnico = ''): void
+    {
+        error_log('[SIGTI] Excepcion: ' . $mensajeTecnico);
+        self::error('Error interno del servidor. Contacte al administrador.', null, 500);
+    }
+
+    public static function datatable(int $draw, int $recordsTotal, int $recordsFiltered, array $rows): void
+    {
+        self::json([
+            'draw'            => $draw,
+            'recordsTotal'    => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data'            => $rows,
+        ]);
+    }
+}
+'@
+[IO.File]::WriteAllText("$base\core\Response.php", $response, $utf8); Write-Host "  OK: core\Response.php" -ForegroundColor Green
+
+# ---------------- core/Validator.php ----------------
+ $validator = @'
+<?php
+// ============================================================
+// SIGTI - Validacion de datos del servidor
+// ============================================================
+
+class Validator
+{
+    private array $data;
+    private array $rules;
+    private array $labels;
+    private array $errors = [];
+
+    public function __construct(array $data, array $rules, array $labels = [])
+    {
+        $this->data   = $data;
+        $this->rules  = $rules;
+        $this->labels = $labels;
+    }
+
+    public static function make(array $data, array $rules, array $labels = []): self
+    {
+        $v = new self($data, $rules, $labels);
+        $v->ejecutar();
+        return $v;
+    }
+
+    public function fails(): bool      { return !empty($this->errors); }
+    public function passes(): bool     { return empty($this->errors); }
+    public function errors(): array    { return $this->errors; }
+    public function primero(): string  { return reset($this->errors) ?: ''; }
+
+    private function ejecutar(): void
+    {
+        foreach ($this->rules as $campo => $reglasStr) {
+
+            $valor   = $this->data[$campo] ?? null;
+            $esVacio = ($valor === null || $valor === '' || $valor === []);
+            $label   = $this->labels[$campo] ?? ucfirst(str_replace('_', ' ', $campo));
+
+            $reglas = explode('|', $reglasStr);
+            if (in_array('required', $reglas, true) && $esVacio) {
+                $this->errors[$campo] = "El campo {$label} es obligatorio.";
+                continue;
+            }
+            if ($esVacio) continue;
+
+            foreach ($reglas as $regla) {
+                [$nombre, $param] = array_pad(explode(':', $regla, 2), 2, null);
+                $this->aplicarRegla($campo, $label, (string)$valor, $nombre, $param);
+                if (isset($this->errors[$campo])) break;
+            }
+        }
+    }
+
+    private function aplicarRegla(string $campo, string $label, string $valor, string $regla, ?string $param): void
+    {
+        switch ($regla) {
+            case 'email':
+                if (!filter_var($valor, FILTER_VALIDATE_EMAIL))
+                    $this->errors[$campo] = "El campo {$label} debe ser un correo valido.";
+                break;
+            case 'integer':
+                if (filter_var($valor, FILTER_VALIDATE_INT) === false)
+                    $this->errors[$campo] = "El campo {$label} debe ser un numero entero.";
+                break;
+            case 'numeric':
+                if (!is_numeric($valor))
+                    $this->errors[$campo] = "El campo {$label} debe ser numerico.";
+                break;
+            case 'min':
+                if (is_numeric($valor) && (float)$valor < (float)$param)
+                    $this->errors[$campo] = "El campo {$label} debe ser mayor o igual a {$param}.";
+                break;
+            case 'max':
+                if (is_numeric($valor) && (float)$valor > (float)$param)
+                    $this->errors[$campo] = "El campo {$label} no debe superar {$param}.";
+                break;
+            case 'minlen':
+                if (mb_strlen($valor) < (int)$param)
+                    $this->errors[$campo] = "El campo {$label} debe tener al menos {$param} caracteres.";
+                break;
+            case 'maxlen':
+                if (mb_strlen($valor) > (int)$param)
+                    $this->errors[$campo] = "El campo {$label} no debe superar {$param} caracteres.";
+                break;
+            case 'in':
+                $opciones = array_map('trim', explode(',', (string)$param));
+                if (!in_array($valor, $opciones, true))
+                    $this->errors[$campo] = "El campo {$label} debe ser uno de: " . implode(', ', $opciones) . ".";
+                break;
+            case 'date':
+                $d = DateTime::createFromFormat('Y-m-d', $valor);
+                if (!$d || $d->format('Y-m-d') !== $valor)
+                    $this->errors[$campo] = "El campo {$label} debe ser una fecha valida (AAAA-MM-DD).";
+                break;
+            case 'datetime':
+                $d = DateTime::createFromFormat('Y-m-d H:i:s', $valor);
+                if (!$d)
+                    $this->errors[$campo] = "El campo {$label} debe ser fecha y hora valida.";
+                break;
+            case 'dni':
+                if (!preg_match('/^\d{8}$/', $valor))
+                    $this->errors[$campo] = "El campo {$label} debe tener 8 digitos.";
+                break;
+            case 'telefono':
+                if (!preg_match('/^[0-9+\-\s()]{6,20}$/', $valor))
+                    $this->errors[$campo] = "El campo {$label} debe ser un telefono valido.";
+                break;
+            case 'alpha_spaces':
+                if (!preg_match('/^[\p{L}\s]+$/u', $valor))
+                    $this->errors[$campo] = "El campo {$label} solo acepta letras.";
+                break;
+            case 'boolean':
+                if (!in_array($valor, ['0','1',0,1,true,false], true))
+                    $this->errors[$campo] = "El campo {$label} debe ser 0 o 1.";
+                break;
+        }
+    }
+}
+'@
+[IO.File]::WriteAllText("$base\core\Validator.php", $validator, $utf8); Write-Host "  OK: core\Validator.php" -ForegroundColor Green
+
+# ---------------- core/Auth.php ----------------
+ $auth = @'
+<?php
+// ============================================================
+// SIGTI - Autenticacion, sesion, roles y permisos
+// ============================================================
+
+class Auth
+{
+    public static function startSession(): void
+    {
+        if (session_status() === PHP_SESSION_ACTIVE) return;
+        session_name('SIGTISESSID');
+        session_set_cookie_params([
+            'lifetime' => 0,
+            'path'     => '/',
+            'httponly' => true,
+            'samesite' => 'Lax',
+            'secure'   => isset($_SERVER['HTTPS']),
+        ]);
+        session_start();
+    }
+
+    public static function attempt(string $usuario, string $password): array
+    {
+        $usuario = trim($usuario);
+        if ($usuario === '' || $password === '') {
+            return ['success' => false, 'message' => 'Ingrese usuario y contrasena.'];
+        }
+
+        $u = Database::getOne(
+            "SELECT u.id, u.usuario, u.password_hash, u.estado, u.intentos_fallidos,
+                    u.rol_id, u.nombre_completo, r.nombre AS rol
+             FROM usuarios u
+             INNER JOIN roles r ON r.id = u.rol_id
+             WHERE u.usuario = ?",
+            [$usuario]
+        );
+
+        $generico = 'Usuario o contrasena incorrectos.';
+
+        if (!$u) {
+            Auditoria::registrar('login_fallido', 'usuarios', null, null, "usuario='$usuario' (no existe)");
+            return ['success' => false, 'message' => $generico];
+        }
+
+        if ($u['password_hash'] === 'PENDIENTE_ACTIVAR') {
+            return ['success' => false,
+                    'message' => 'La cuenta admin aun no esta activada. Ejecute crear_admin.php primero.'];
+        }
+
+        if ($u['estado'] === 'bloqueado') {
+            Auditoria::registrar('login_fallido', 'usuarios', (int)$u['id'], null, 'cuenta bloqueada');
+            return ['success' => false, 'message' => 'La cuenta esta bloqueada. Contacte al administrador.'];
+        }
+
+        if ($u['estado'] === 'inactivo') {
+            return ['success' => false, 'message' => 'La cuenta esta inactiva.'];
+        }
+
+        if (!password_verify($password, $u['password_hash'])) {
+
+            $intentos = (int)$u['intentos_fallidos'] + 1;
+
+            if ($intentos >= MAX_INTENTOS_LOGIN) {
+                Database::update('usuarios',
+                    ['estado' => 'bloqueado', 'intentos_fallidos' => $intentos],
+                    'id = ?', [$u['id']]);
+                Auditoria::registrar('login_fallido', 'usuarios', (int)$u['id'], null,
+                    "cuenta BLOQUEADA al intento $intentos");
+                return ['success' => false,
+                        'message' => 'Contrasena incorrecta. La cuenta fue BLOQUEADA (' . MAX_INTENTOS_LOGIN . ' intentos).'];
+            }
+
+            Database::update('usuarios', ['intentos_fallidos' => $intentos], 'id = ?', [$u['id']]);
+            Auditoria::registrar('login_fallido', 'usuarios', (int)$u['id'], null, "intento $intentos");
+
+            $restan = MAX_INTENTOS_LOGIN - $intentos;
+            return ['success' => false,
+                    'message' => "Usuario o contrasena incorrectos. Quedan $restan intento(s)."];
+        }
+
+        session_regenerate_id(true);
+
+        $_SESSION['usuario'] = [
+            'id'       => (int)$u['id'],
+            'usuario'  => $u['usuario'],
+            'nombre'   => $u['nombre_completo'],
+            'rol'      => $u['rol'],
+            'permisos' => self::cargarPermisos((int)$u['rol_id']),
+        ];
+        $_SESSION['ultima_actividad'] = time();
+
+        Database::update('usuarios',
+            ['intentos_fallidos' => 0, 'ultimo_acceso' => date('Y-m-d H:i:s')],
+            'id = ?', [$u['id']]);
+
+        Auditoria::registrar('login', 'usuarios', (int)$u['id']);
+
+        return ['success' => true, 'message' => 'Bienvenido, ' . $u['nombre_completo']];
+    }
+
+    public static function isLogged(): bool
+    {
+        return isset($_SESSION['usuario']);
+    }
+
+    public static function check(): void
+    {
+        if (!self::isLogged()) {
+            Response::noAuth('Sesion no iniciada.');
+        }
+        $limite = SESSION_TIMEOUT_MIN * 60;
+        if (isset($_SESSION['ultima_actividad']) && (time() - $_SESSION['ultima_actividad']) > $limite) {
+            self::logout();
+            Response::noAuth('Sesion expirada por inactividad.');
+        }
+        $_SESSION['ultima_actividad'] = time();
+    }
+
+    public static function userId(): ?int
+    {
+        return $_SESSION['usuario']['id'] ?? null;
+    }
+
+    public static function nombre(): string
+    {
+        return $_SESSION['usuario']['nombre'] ?? '';
+    }
+
+    public static function rol(): ?string
+    {
+        return $_SESSION['usuario']['rol'] ?? null;
+    }
+
+    public static function info(): array
+    {
+        $u = $_SESSION['usuario'] ?? null;
+        if (!$u) return [];
+        unset($u['permisos']);
+        return $u;
+    }
+
+    public static function esRol(string ...$roles): bool
+    {
+        return in_array(self::rol(), $roles, true);
+    }
+
+    public static function requireRol(string ...$roles): void
+    {
+        if (!self::esRol(...$roles)) {
+            Response::forbidden('Esta accion requiere rol: ' . implode(' o ', $roles));
+        }
+    }
+
+    public static function can(string $modulo, string $accion): bool
+    {
+        if (self::rol() === 'super_admin') return true;
+        return in_array("$modulo.$accion", $_SESSION['usuario']['permisos'] ?? [], true);
+    }
+
+    public static function requirePermission(string $modulo, string $accion): void
+    {
+        if (!self::can($modulo, $accion)) {
+            Response::forbidden("No tiene permiso para [{$modulo}.{$accion}].");
+        }
+    }
+
+    private static function cargarPermisos(int $rolId): array
+    {
+        $filas = Database::get(
+            "SELECT CONCAT(p.modulo, '.', p.accion) AS permiso
+             FROM rol_permisos rp
+             INNER JOIN permisos p ON p.id = rp.permiso_id
+             WHERE rp.rol_id = ?",
+            [$rolId]
+        );
+        return array_column($filas, 'permiso');
+    }
+
+    public static function logout(): void
+    {
+        if (self::isLogged()) {
+            Auditoria::registrar('logout', 'usuarios', self::userId());
+        }
+        $_SESSION = [];
+        if (ini_get('session.use_cookies')) {
+            $p = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000, $p['path'], $p['domain'] ?? '', $p['secure'], $p['httponly']);
+        }
+        session_destroy();
+    }
+}
+'@
+[IO.File]::WriteAllText("$base\core\Auth.php", $auth, $utf8); Write-Host "  OK: core\Auth.php" -ForegroundColor Green
+
+# ---------------- core/Csrf.php ----------------
+ $csrf = @'
+<?php
+// ============================================================
+// SIGTI - Token anti-CSRF para peticiones AJAX
+// ============================================================
+
+class Csrf
+{
+    public static function token(): string
+    {
+        if (empty($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        }
+        return $_SESSION['csrf_token'];
+    }
+
+    public static function validate(): void
+    {
+        $recibido = $_SERVER['HTTP_X_CSRF_TOKEN']
+                    ?? ($_POST['csrf_token'] ?? '');
+
+        if (empty($_SESSION['csrf_token'])
+            || !is_string($recibido)
+            || !hash_equals($_SESSION['csrf_token'], $recibido)) {
+            Response::errorCsrf();
+        }
+    }
+}
+'@
+[IO.File]::WriteAllText("$base\core\Csrf.php", $csrf, $utf8); Write-Host "  OK: core\Csrf.php" -ForegroundColor Green
+
+# ---------------- core/Auditoria.php ----------------
+ $auditoria = @'
+<?php
+// ============================================================
+// SIGTI - Registro de auditoria
+// Archivo: Auditoria.php  (SIN tilde)  Clase: class Auditoria
+// ============================================================
+
+class Auditoria
+{
+    public static function registrar(
+        string $accion,
+        ?string $tabla = null,
+        ?int    $registroId = null,
+        $datosAnteriores = null,
+        $datosNuevos = null
+    ): void {
+        try {
+            Database::insert('auditoria_logs', [
+                'usuario_id'       => Auth::userId(),
+                'accion'           => $accion,
+                'tabla'            => $tabla,
+                'registro_id'      => $registroId,
+                'datos_anteriores' => self::aTexto($datosAnteriores),
+                'datos_nuevos'     => self::aTexto($datosNuevos),
+                'ip'               => $_SERVER['REMOTE_ADDR'] ?? null,
+                'user_agent'       => mb_substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 250),
+            ]);
+        } catch (Throwable $e) {
+            error_log('[SIGTI] Fallo al auditar: ' . $e->getMessage());
+        }
+    }
+
+    private static function aTexto($datos): ?string
+    {
+        if ($datos === null) return null;
+        if (is_array($datos)) return json_encode($datos, JSON_UNESCAPED_UNICODE);
+        return (string) $datos;
+    }
+}
+'@
+[IO.File]::WriteAllText("$base\core\Auditoria.php", $auditoria, $utf8); Write-Host "  OK: core\Auditoria.php" -ForegroundColor Green
+
+# ---------------- core/Correlativo.php ----------------
+ $correlativo = @'
+<?php
+// ============================================================
+// SIGTI - Generacion de codigos correlativos unicos
+// TK-2025-00001, MT-..., SQ-..., AC-..., EQ-...
+// ============================================================
+
+class Correlativo
+{
+    private const PREFIJOS = [
+        'ticket'       => 'TK',
+        'mantenimiento'=> 'MT',
+        'solicitud'    => 'SQ',
+        'acta'         => 'AC',
+        'equipo'       => 'EQ',
+    ];
+
+    public static function generar(string $tipo): string
+    {
+        if (!isset(self::PREFIJOS[$tipo])) {
+            throw new InvalidArgumentException("Tipo de correlativo desconocido: $tipo");
+        }
+
+        $anio = (int) date('Y');
+        $pdo  = Database::conn();
+        $pdo->beginTransaction();
+
+        try {
+            $stmt = $pdo->prepare(
+                "SELECT ultimo_numero FROM correlativos
+                 WHERE tipo_doc = ? AND anio = ? FOR UPDATE"
+            );
+            $stmt->execute([$tipo, $anio]);
+            $fila = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($fila) {
+                $nuevo = (int)$fila['ultimo_numero'] + 1;
+                $pdo->prepare("UPDATE correlativos SET ultimo_numero = ? WHERE tipo_doc = ? AND anio = ?")
+                    ->execute([$nuevo, $tipo, $anio]);
+            } else {
+                $nuevo = 1;
+                $pdo->prepare("INSERT INTO correlativos (tipo_doc, anio, ultimo_numero) VALUES (?, ?, ?)")
+                    ->execute([$tipo, $anio, $nuevo]);
+            }
+
+            $pdo->commit();
+            return sprintf('%s-%d-%05d', self::PREFIJOS[$tipo], $anio, $nuevo);
+
+        } catch (Throwable $e) {
+            Database::rollback();
+            throw $e;
+        }
+    }
+}
+'@
+[IO.File]::WriteAllText("$base\core\Correlativo.php", $correlativo, $utf8); Write-Host "  OK: core\Correlativo.php" -ForegroundColor Green
+
+# ---------------- core/Upload.php ----------------
+ $upload = @'
+<?php
+// ============================================================
+// SIGTI - Subida segura de archivos
+// ============================================================
+
+class Upload
+{
+    public static function guardar(array $file, string $subcarpeta): array
+    {
+        $codigo = $file['error'] ?? UPLOAD_ERR_NO_FILE;
+        if ($codigo !== UPLOAD_ERR_OK) {
+            throw new RuntimeException('Error al subir archivo (codigo ' . $codigo . ').');
+        }
+
+        $maxMb = (int)(self::config('max_upload_mb') ?: 10);
+        if ($file['size'] > $maxMb * 1024 * 1024) {
+            throw new RuntimeException("El archivo supera el maximo de {$maxMb} MB.");
+        }
+
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $permitidas = array_map('trim', explode(',', (string) self::config('extensiones_permitidas')));
+        if (!in_array($ext, $permitidas, true)) {
+            throw new RuntimeException("La extension .$ext no esta permitida (" . implode(', ', $permitidas) . ").");
+        }
+
+        $dir = STORAGE_PATH . '/' . $subcarpeta;
+        if (!is_dir($dir)) mkdir($dir, 0775, true);
+
+        $nombre = date('Ymd_His') . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+        $destino = $dir . '/' . $nombre;
+
+        if (!move_uploaded_file($file['tmp_name'], $destino)) {
+            throw new RuntimeException('No se pudo guardar el archivo en el servidor.');
+        }
+
+        return [
+            'archivo'         => $nombre,
+            'nombre_original' => mb_substr(basename($file['name']), 0, 255),
+            'tamano_kb'       => (int) round($file['size'] / 1024),
+        ];
+    }
+
+    private static function config(string $clave): ?string
+    {
+        $row = Database::getOne("SELECT valor FROM configuracion WHERE clave = ?", [$clave]);
+        return $row['valor'] ?? null;
+    }
+}
+'@
+[IO.File]::WriteAllText("$base\core\Upload.php", $upload, $utf8); Write-Host "  OK: core\Upload.php" -ForegroundColor Green
+
+# ---------------- core/guard_vista.php ----------------
+ $guard = @'
+<?php
+// ============================================================
+// SIGTI - Guardian de vistas parciales
+// ============================================================
+require_once __DIR__ . '/bootstrap.php';
+
+if (!Auth::isLogged()) {
+    http_response_code(401);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['success' => false, 'message' => 'Sesion no iniciada o expirada.']);
+    exit;
+}
+'@
+[IO.File]::WriteAllText("$base\core\guard_vista.php", $guard, $utf8); Write-Host "  OK: core\guard_vista.php" -ForegroundColor Green
+
+# ---------------- api/auth/login.php ----------------
+ $login = @'
+<?php
+require_once __DIR__ . '/../../core/bootstrap.php';
+
+Csrf::validate();
+
+ $v = Validator::make($_POST, [
+    'usuario'  => 'required|maxlen:50',
+    'password' => 'required|maxlen:100',
+], ['usuario' => 'Usuario', 'password' => 'Contrasena']);
+
+if ($v->fails()) Response::validation($v->errors());
+
+ $res = Auth::attempt($_POST['usuario'], $_POST['password']);
+
+if (!$res['success']) {
+    Response::error($res['message'], null, 401);
+}
+
+Response::ok([
+    'usuario'  => Auth::info(),
+    'permisos' => $_SESSION['usuario']['permisos'] ?? [],
+], $res['message']);
+'@
+[IO.File]::WriteAllText("$base\api\auth\login.php", $login, $utf8); Write-Host "  OK: api\auth\login.php" -ForegroundColor Green
+
+# ---------------- api/auth/logout.php ----------------
+ $logout = @'
+<?php
+require_once __DIR__ . '/../../core/bootstrap.php';
+
+Auth::check();
+Csrf::validate();
+
+Auth::logout();
+Response::ok(null, 'Sesion cerrada correctamente.');
+'@
+[IO.File]::WriteAllText("$base\api\auth\logout.php", $logout, $utf8); Write-Host "  OK: api\auth\logout.php" -ForegroundColor Green
+
+# ---------------- api/auth/perfil.php ----------------
+ $perfil = @'
+<?php
+require_once __DIR__ . '/../../core/bootstrap.php';
+
+Auth::check();
+
+Response::ok([
+    'usuario'  => Auth::info(),
+    'permisos' => $_SESSION['usuario']['permisos'] ?? [],
+]);
+'@
+[IO.File]::WriteAllText("$base\api\auth\perfil.php", $perfil, $utf8); Write-Host "  OK: api\auth\perfil.php" -ForegroundColor Green
+
+# ---------------- .htaccess (carpetas protegidas) ----------------
+foreach ($c in @('config','core','db','storage')) {
+    [IO.File]::WriteAllText("$base\$c\.htaccess", "Require all denied`r`n", $utf8)
+    Write-Host "  OK: $c\.htaccess" -ForegroundColor Green
+}
+
+# ---------------- VERIFICACION FINAL ----------------
+Write-Host "`n=== 4. VERIFICACION FINAL DE TODOS LOS ARCHIVOS ===" -ForegroundColor Cyan
+ $requeridos = @(
+    'index.php','crear_admin.php','test_core.php',
+    'config\config.php',
+    'core\bootstrap.php','core\Database.php','core\Response.php','core\Validator.php',
+    'core\Auth.php','core\Csrf.php','core\Auditoria.php','core\Correlativo.php',
+    'core\Upload.php','core\guard_vista.php',
+    'api\auth\login.php','api\auth\logout.php','api\auth\perfil.php',
+    'views\dashboard\principal.php',
+    'assets\css\sigti.css',
+    'assets\js\core\app.js','assets\js\core\toast.js','assets\js\core\loader.js',
+    'assets\js\core\ajax.js','assets\js\core\menu.js','assets\js\core\router.js',
+    'assets\js\core\notificaciones.js',
+    'db\sigti.sql'
+)
+ $faltan = @()
+foreach ($r in $requeridos) {
+    if (-not (Test-Path (Join-Path $base $r))) { $faltan += $r; Write-Host "  FALTA: $r" -ForegroundColor Red }
+}
+if ($faltan.Count -eq 0) {
+    Write-Host "`n>>> ESTRUCTURA 100% COMPLETA <<<" -ForegroundColor Green
+    Write-Host ">>> Abre: http://localhost/Plataforma-Servicio-TI/test_core.php <<<" -ForegroundColor Green
+} else {
+    Write-Host "`nBackend reparado. Faltan $($faltan.Count) archivos de frontend/otros:" -ForegroundColor Yellow
+    Write-Host "    (copialos del mensaje del Paso 3 o pídemelos y te los regenero)"
+}

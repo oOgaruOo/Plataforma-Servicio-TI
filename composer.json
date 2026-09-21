@@ -1,0 +1,10 @@
+{
+    "name": "empresa/sigti",
+    "description": "Sistema Integral de Gestion TI - HelpDesk, Inventario, Altas y Ceses",
+    "type": "project",
+    "license": "proprietary",
+    "require": {},
+    "autoload": {
+        "classmap": ["core/"]
+    }
+}
