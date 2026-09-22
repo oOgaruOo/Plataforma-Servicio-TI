@@ -1,0 +1,565 @@
+# ============================================================
+#  SIGTI - REGENERADOR PASO 4 (B): JavaScript
+# ============================================================
+ $base = 'C:\xampp\htdocs\Plataforma-Servicio-TI'
+ $utf8 = New-Object System.Text.UTF8Encoding($false)
+
+if (-not (Test-Path "$base\assets\js\app")) {
+    New-Item -ItemType Directory -Path "$base\assets\js\app" -Force | Out-Null
+}
+
+# ---------------- assets/js/core/datatables.js ----------------
+ $j1 = @'
+// ============================================================
+// SIGTI - DataTables: idioma espanol + helper server-side
+// ============================================================
+
+const DATATABLES_ES = {
+  processing:    'Procesando...',
+  search:        'Buscar:',
+  lengthMenu:    'Mostrar _MENU_ registros',
+  info:          'Mostrando _START_ a _END_ de _TOTAL_ registros',
+  infoEmpty:     'Mostrando 0 a 0 de 0 registros',
+  infoFiltered:  '(filtrado de _MAX_ registros en total)',
+  loadingRecords:'Cargando...',
+  zeroRecords:   'No se encontraron registros',
+  emptyTable:    'No hay registros disponibles',
+  paginate: { first:'Primero', last:'Ultimo', next:'Siguiente', previous:'Anterior' },
+  aria: { sortAscending:': activar para ordenar ascendente',
+          sortDescending:': activar para ordenar descendente' }
+};
+
+const DT = {
+  server(selector, url, extraData, columns, opts = {}) {
+    return $(selector).DataTable({
+      processing: true,
+      serverSide: true,
+      language: DATATABLES_ES,
+      pageLength: 10,
+      lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+      ajax: {
+        url: BASE_URL + url,
+        type: 'POST',
+        headers: { 'X-CSRF-Token': CSRF.token },
+        data: d => Object.assign(d, typeof extraData === 'function' ? extraData() : (extraData || {})),
+        error: xhr => {
+          if (xhr.status === 401) { App.sesionExpirada(); return; }
+          if (xhr.status === 419) {
+            Toast.error('Sesion de seguridad expirada. Recargando...');
+            setTimeout(() => location.reload(), 1500);
+            return;
+          }
+          let msg = 'Error al obtener los datos de la tabla (' + xhr.status + ').';
+          try {
+            const r = JSON.parse(xhr.responseText);
+            if (r && r.message) msg += ' ' + r.message;
+          } catch (_) {}
+          Toast.error(msg);
+        }
+      },
+      columns,
+      ...opts
+    });
+  }
+};
+'@
+[IO.File]::WriteAllText("$base\assets\js\core\datatables.js", $j1, $utf8); Write-Host "OK: assets\js\core\datatables.js" -ForegroundColor Green
+
+# ---------------- assets/js/app/catalogos.js ----------------
+ $j2 = @'
+// ============================================================
+// SIGTI - Modulo Catalogos (vista: configuracion/principal)
+// ============================================================
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, m =>
+    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[m]));
+}
+
+const Badges = {
+  estado(v) {
+    return v === 'activo'
+      ? '<span class="badge text-bg-success">Activo</span>'
+      : '<span class="badge text-bg-secondary">Inactivo</span>';
+  },
+  bool(v) {
+    return +v === 1
+      ? '<span class="badge text-bg-success">Activo</span>'
+      : '<span class="badge text-bg-secondary">Inactivo</span>';
+  },
+  usuario(v) {
+    const map = {
+      activo:    '<span class="badge text-bg-success">Activo</span>',
+      bloqueado: '<span class="badge text-bg-danger">Bloqueado</span>',
+      inactivo:  '<span class="badge text-bg-secondary">Inactivo</span>'
+    };
+    return map[v] || esc(v);
+  }
+};
+
+function pintarErroresForm(selectorForm, errores) {
+  $(selectorForm + ' .form-error').remove();
+  $(selectorForm + ' .is-invalid').removeClass('is-invalid');
+  $.each(errores || {}, (campo, msg) => {
+    const $c = $(selectorForm + ' [data-campo="' + campo + '"]');
+    if ($c.length) {
+      $c.append('<div class="form-error"><i class="bi bi-exclamation-circle me-1"></i>' + esc(msg) + '</div>');
+      $c.find('.form-control, .form-select').addClass('is-invalid');
+    } else {
+      Toast.warning(msg);
+    }
+  });
+}
+
+const COL_ACCIONES = {
+  data: null, orderable: false, className: 'text-nowrap text-center',
+  render: () =>
+    '<button class="btn btn-sm btn-outline-primary btn-editar me-1" title="Editar"><i class="bi bi-pencil"></i></button>' +
+    '<button class="btn btn-sm btn-outline-secondary btn-toggle" title="Activar / desactivar"><i class="bi bi-power"></i></button>'
+};
+
+const Catalogos = {
+
+  CONFIG: {
+    areas: {
+      singular: 'area',
+      columnas: [
+        { data: 'nombre' },
+        { data: 'descripcion', render: v => v ? esc(v) : '<span class="text-muted">—</span>' },
+        { data: 'estado', render: v => Badges.estado(v), className: 'text-center' },
+        COL_ACCIONES
+      ],
+      campos: [
+        { name: 'nombre', label: 'Nombre', req: true, maxlen: 80, ph: 'Ej: Recursos Humanos' },
+        { name: 'descripcion', label: 'Descripcion', type: 'textarea', maxlen: 200 },
+        { name: 'estado', label: 'Estado', type: 'select', opts: [['activo','Activo'],['inactivo','Inactivo']], def: 'activo' }
+      ]
+    },
+    tipos: {
+      singular: 'tipo de equipo',
+      columnas: [
+        { data: 'nombre' },
+        { data: 'activo', render: v => Badges.bool(v), className: 'text-center' },
+        COL_ACCIONES
+      ],
+      campos: [
+        { name: 'nombre', label: 'Nombre del tipo', req: true, maxlen: 60, ph: 'Ej: Laptop, Impresora, Monitor...' },
+        { name: 'activo', label: 'Activo (visible en formularios)', type: 'check', def: 1 }
+      ]
+    },
+    categorias: {
+      singular: 'categoria',
+      columnas: [
+        { data: 'nombre' },
+        { data: 'descripcion', render: v => v ? esc(v) : '<span class="text-muted">—</span>' },
+        { data: 'activo', render: v => Badges.bool(v), className: 'text-center' },
+        COL_ACCIONES
+      ],
+      campos: [
+        { name: 'nombre', label: 'Nombre de la categoria', req: true, maxlen: 60, ph: 'Ej: Hardware, Correo...' },
+        { name: 'descripcion', label: 'Descripcion', type: 'textarea', maxlen: 200 },
+        { name: 'activo', label: 'Activa', type: 'check', def: 1 }
+      ]
+    },
+    subcategorias: {
+      singular: 'subcategoria',
+      columnas: [
+        { data: 'nombre' },
+        { data: 'categoria' },
+        { data: 'activo', render: v => Badges.bool(v), className: 'text-center' },
+        COL_ACCIONES
+      ],
+      campos: [
+        { name: 'categoria_id', label: 'Categoria', type: 'lista', lista: 'categorias', req: true },
+        { name: 'nombre', label: 'Nombre', req: true, maxlen: 80, ph: 'Ej: Sin internet, Buzon lleno...' },
+        { name: 'activo', label: 'Activa', type: 'check', def: 1 }
+      ]
+    },
+    prioridades: {
+      singular: 'prioridad',
+      columnas: [
+        { data: 'nombre' },
+        { data: 'nivel', className: 'text-center' },
+        { data: 'color', className: 'text-center',
+          render: v => '<span class="swatch" style="background:' + esc(v) + '"></span>' + esc(v) },
+        { data: 'sla_horas', className: 'text-center' },
+        { data: 'activo', render: v => Badges.bool(v), className: 'text-center' },
+        COL_ACCIONES
+      ],
+      campos: [
+        { name: 'nombre', label: 'Nombre', req: true, maxlen: 20, ph: 'Ej: Critica, Alta...' },
+        { name: 'nivel', label: 'Nivel (1 = mas urgente)', type: 'numero', req: true },
+        { name: 'color', label: 'Color de identificacion', type: 'color', req: true },
+        { name: 'sla_horas', label: 'SLA en horas (limite de resolucion)', type: 'numero', req: true },
+        { name: 'activo', label: 'Activa', type: 'check', def: 1 }
+      ]
+    },
+    proveedores: {
+      singular: 'proveedor',
+      columnas: [
+        { data: 'ruc', render: v => v ? esc(v) : '<span class="text-muted">—</span>' },
+        { data: 'nombre' },
+        { data: 'contacto', render: v => v ? esc(v) : '<span class="text-muted">—</span>' },
+        { data: 'telefono', render: v => v ? esc(v) : '<span class="text-muted">—</span>' },
+        { data: 'correo', render: v => v ? esc(v) : '<span class="text-muted">—</span>' },
+        { data: 'especialidad', render: v => v ? esc(v) : '<span class="text-muted">—</span>' },
+        { data: 'estado', render: v => Badges.estado(v), className: 'text-center' },
+        COL_ACCIONES
+      ],
+      campos: [
+        { name: 'ruc', label: 'RUC', maxlen: 15, ph: 'Ej: 20512345678' },
+        { name: 'nombre', label: 'Razon social / nombre', req: true, maxlen: 120 },
+        { name: 'contacto', label: 'Persona de contacto', maxlen: 100 },
+        { name: 'telefono', label: 'Telefono', maxlen: 30 },
+        { name: 'correo', label: 'Correo', type: 'email', maxlen: 120 },
+        { name: 'especialidad', label: 'Especialidad', maxlen: 120, ph: 'Ej: Reparacion de laptops' },
+        { name: 'estado', label: 'Estado', type: 'select', opts: [['activo','Activo'],['inactivo','Inactivo']], def: 'activo' }
+      ]
+    }
+  },
+
+  tablas: {},
+
+  init() {
+    const self = this;
+
+    const tipoInicial = $('.nav-tabs .nav-link.active').data('tipo');
+    if (tipoInicial) this._initTabla(tipoInicial);
+
+    $('.nav-tabs .nav-link').on('shown.bs.tab', function () {
+      const tipo = $(this).data('tipo');
+      if (!self.tablas[tipo]) self._initTabla(tipo);
+      else self.tablas[tipo].columns.adjust();
+    });
+
+    $('.btn-nuevo').on('click', function () {
+      self._abrirForm($(this).data('tipo'), null);
+    });
+
+    Object.keys(this.CONFIG).forEach(tipo => {
+      $('#tb-' + tipo).on('click', '.btn-editar, .btn-toggle', function () {
+        if (!self.tablas[tipo]) return;
+        const fila = self.tablas[tipo].row($(this).closest('tr')).data();
+        if (!fila) return;
+        if ($(this).hasClass('btn-editar')) self._abrirForm(tipo, fila);
+        else                                self._toggle(tipo, fila);
+      });
+    });
+  },
+
+  _initTabla(tipo) {
+    this.tablas[tipo] = DT.server('#tb-' + tipo, 'api/catalogos/listar.php',
+      () => ({ tipo }), this.CONFIG[tipo].columnas);
+  },
+
+  _abrirForm(tipo, fila) {
+    const c = this.CONFIG[tipo];
+    const esNuevo = !fila;
+
+    const pendientes = c.campos
+      .filter(cam => cam.type === 'lista')
+      .map(cam => Api.get('api/catalogos/select.php', { tipo: cam.lista })
+        .then(lista => { cam._opciones = lista; })
+        .catch(() => { cam._opciones = []; }));
+
+    Promise.all(pendientes).finally(() => {
+      let html = '<form id="form-catalogo" autocomplete="off" data-id="' + (esNuevo ? 0 : fila.id) + '">';
+      c.campos.forEach(cam => {
+        const valor = esNuevo ? (cam.def ?? '') : (fila[cam.name] ?? '');
+        html += this._campoHtml(cam, valor);
+      });
+      html += `
+        <div class="d-flex justify-content-end gap-2 mt-4">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btn-guardar-catalogo">
+            <i class="bi bi-check-lg"></i> Guardar
+          </button>
+        </div>
+      </form>`;
+
+      Modal.abrir((esNuevo ? 'Nuevo — ' : 'Editar — ') + c.singular, html);
+
+      $('#btn-guardar-catalogo').on('click', () => this._guardar(tipo));
+      $('#form-catalogo').on('submit', e => { e.preventDefault(); this._guardar(tipo); });
+    });
+  },
+
+  _campoHtml(cam, valor) {
+    const req = cam.req ? ' <span class="text-danger">*</span>' : '';
+
+    if (cam.type === 'check') {
+      const marcado = (valor === 1 || valor === '1');
+      return '<div class="form-check mt-2" data-campo="' + cam.name + '">' +
+        '<input class="form-check-input" type="checkbox" id="fc-' + cam.name + '" ' + (marcado ? 'checked' : '') + '>' +
+        '<label class="form-check-label" for="fc-' + cam.name + '">' + esc(cam.label) + '</label></div>';
+    }
+
+    let control = '';
+    switch (cam.type) {
+      case 'textarea':
+        control = '<textarea class="form-control" id="fc-' + cam.name + '" rows="2" maxlength="' +
+                  (cam.maxlen || 250) + '">' + esc(valor) + '</textarea>';
+        break;
+      case 'select':
+        control = '<select class="form-select" id="fc-' + cam.name + '">' +
+          cam.opts.map(([v, t]) =>
+            '<option value="' + esc(v) + '"' + (String(valor) === String(v) ? ' selected' : '') + '">' + esc(t) + '</option>'
+          ).join('') + '</select>';
+        break;
+      case 'lista':
+        control = '<select class="form-select" id="fc-' + cam.name + '">' +
+          (cam._opciones || []).map(o =>
+            '<option value="' + esc(o.id) + '"' + (String(valor) === String(o.id) ? ' selected' : '') + '>' +
+            esc(o.texto || o.nombre) + '</option>'
+          ).join('') + '</select>';
+        break;
+      case 'numero':
+        control = '<input type="number" class="form-control" id="fc-' + cam.name + '" min="1" value="' + esc(valor) + '">';
+        break;
+      case 'color':
+        control = '<input type="color" class="form-control form-control-color w-100" id="fc-' + cam.name +
+                  '" value="' + (valor || '#2563eb') + '">';
+        break;
+      case 'email':
+        control = '<input type="email" class="form-control" id="fc-' + cam.name + '" value="' + esc(valor) +
+                  '" maxlength="' + (cam.maxlen || 120) + '">';
+        break;
+      default:
+        control = '<input type="text" class="form-control" id="fc-' + cam.name + '" value="' + esc(valor) +
+                  '" maxlength="' + (cam.maxlen || 100) + '" placeholder="' + esc(cam.ph || '') + '">';
+    }
+
+    return '<div class="mb-3" data-campo="' + cam.name + '">' +
+           '<label class="form-label">' + esc(cam.label) + req + '</label>' + control + '</div>';
+  },
+
+  _guardar(tipo) {
+    const c = this.CONFIG[tipo];
+    const datos = { tipo: tipo, id: $('#form-catalogo').data('id') || 0 };
+
+    c.campos.forEach(cam => {
+      const $el = $('#fc-' + cam.name);
+      if (cam.type === 'check') datos[cam.name] = $el.is(':checked') ? 1 : 0;
+      else                      datos[cam.name] = $.trim($el.val() || '');
+    });
+
+    Api.post('api/catalogos/guardar.php', datos)
+      .then(() => { Modal.cerrar(); this.tablas[tipo].draw(); })
+      .catch(err => {
+        if (err && err.cuerpo && err.cuerpo.errors) pintarErroresForm('#form-catalogo', err.cuerpo.errors);
+      });
+  },
+
+  _toggle(tipo, fila) {
+    const activo = (+fila.activo === 1 || fila.estado === 'activo');
+    const verbo  = activo ? 'desactivar' : 'activar';
+
+    Swal.fire({
+      title: '¿' + verbo.charAt(0).toUpperCase() + verbo.slice(1) + ' este registro?',
+      html: 'El historial <b>no se pierde</b>; los inactivos dejan de aparecer en los formularios de nuevos registros.',
+      icon: 'question', showCancelButton: true,
+      confirmButtonText: 'Si, continuar', cancelButtonText: 'Cancelar', confirmButtonColor: '#2563eb'
+    }).then(r => {
+      if (!r.isConfirmed) return;
+      Api.post('api/catalogos/toggle.php', { tipo: tipo, id: fila.id })
+        .then(() => this.tablas[tipo].draw());
+    });
+  }
+};
+
+App.registrar('configuracion', Catalogos);
+'@
+[IO.File]::WriteAllText("$base\assets\js\app\catalogos.js", $j2, $utf8); Write-Host "OK: assets\js\app\catalogos.js" -ForegroundColor Green
+
+# ---------------- assets/js/app/usuarios.js ----------------
+ $j3 = @'
+// ============================================================
+// SIGTI - Modulo Usuarios del Sistema (vista: usuarios/lista)
+// ============================================================
+
+const COL_ACCIONES_USUARIOS = {
+  data: null, orderable: false, className: 'text-nowrap text-center',
+  render: (v, type, fila) => {
+    const propio = App.usuario && fila.id === App.usuario.id;
+    let h =
+      '<button class="btn btn-sm btn-outline-primary btn-editar me-1" title="Editar"><i class="bi bi-pencil"></i></button>' +
+      '<button class="btn btn-sm btn-outline-warning btn-pass me-1" title="Restablecer contrasena"><i class="bi bi-key"></i></button>';
+    if (!propio) {
+      h += fila.estado === 'activo'
+        ? '<button class="btn btn-sm btn-outline-danger btn-bloquear" title="Bloquear"><i class="bi bi-lock"></i></button>'
+        : '<button class="btn btn-sm btn-outline-success btn-activar" title="Activar"><i class="bi bi-unlock"></i></button>';
+    }
+    return h;
+  }
+};
+
+const Usuarios = {
+
+  tabla: null,
+
+  init() {
+    this.tabla = DT.server('#tb-usuarios', 'api/usuarios/listar.php', () => ({}), [
+      { data: 'usuario', render: v => '<strong>' + esc(v) + '</strong>' },
+      { data: 'nombre_completo' },
+      { data: 'rol', render: v => '<span class="badge text-bg-light border">' + esc(v) + '</span>' },
+      { data: 'personal', render: v => v ? esc(v) : '<span class="text-muted">—</span>' },
+      { data: 'correo', render: v => v ? esc(v) : '<span class="text-muted">—</span>' },
+      { data: 'ultimo_acceso', render: v => v ? esc(v) : '<span class="text-muted">nunca</span>' },
+      { data: 'estado', render: v => Badges.usuario(v) },
+      COL_ACCIONES_USUARIOS
+    ]);
+
+    $('#btn-nuevo-usuario').on('click', () => this._abrirForm(null));
+
+    $('#tb-usuarios').on('click', '.btn-editar, .btn-pass, .btn-bloquear, .btn-activar', function () {
+      const fila = Usuarios.tabla.row($(this).closest('tr')).data();
+      if (!fila) return;
+      if      ($(this).hasClass('btn-editar'))   Usuarios._abrirForm(fila);
+      else if ($(this).hasClass('btn-pass'))     Usuarios._abrirPass(fila);
+      else if ($(this).hasClass('btn-bloquear')) Usuarios._cambiarEstado(fila, 'bloqueado', 'bloquear');
+      else                                       Usuarios._cambiarEstado(fila, 'activo', 'activar');
+    });
+  },
+
+  _abrirForm(fila) {
+    const esNuevo = !fila;
+    const propio  = !esNuevo && App.usuario && fila.id === App.usuario.id;
+
+    Promise.all([
+      Api.get('api/catalogos/select.php', { tipo: 'roles' }).catch(() => []),
+      Api.get('api/catalogos/select.php', { tipo: 'personal' }).catch(() => [])
+    ]).then(([roles, personal]) => {
+
+      const val = c => esNuevo ? '' : (fila[c] ?? '');
+
+      const html = `
+      <form id="form-usuario" autocomplete="off" data-id="${esNuevo ? 0 : fila.id}">
+        <div class="row">
+          <div class="col-md-6 mb-3" data-campo="usuario">
+            <label class="form-label">Usuario <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="fu-usuario" value="${esc(val('usuario'))}"
+                   maxlength="50" placeholder="jperez" ${propio ? 'disabled' : ''}>
+          </div>
+          <div class="col-md-6 mb-3" data-campo="nombre_completo">
+            <label class="form-label">Nombre completo <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="fu-nombre" value="${esc(val('nombre_completo'))}" maxlength="120">
+          </div>
+          <div class="col-md-6 mb-3" data-campo="rol_id">
+            <label class="form-label">Rol <span class="text-danger">*</span></label>
+            <select class="form-select" id="fu-rol" ${propio ? 'disabled' : ''}>
+              ${roles.map(r =>
+                `<option value="${r.id}" ${+val('rol_id') === +r.id ? 'selected' : ''}>${esc(r.texto)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="col-md-6 mb-3" data-campo="personal_id">
+            <label class="form-label">Personal vinculado</label>
+            <select class="form-select" id="fu-personal">
+              <option value="">— Sin vinculo —</option>
+              ${personal.map(p =>
+                `<option value="${p.id}" ${+val('personal_id') === +p.id ? 'selected' : ''}>${esc(p.texto)} (${esc(p.dni)})</option>`).join('')}
+            </select>
+          </div>
+          <div class="col-md-6 mb-3" data-campo="correo">
+            <label class="form-label">Correo</label>
+            <input type="email" class="form-control" id="fu-correo" value="${esc(val('correo'))}" maxlength="120">
+          </div>
+          <div class="col-md-6 mb-3" data-campo="estado">
+            <label class="form-label">Estado <span class="text-danger">*</span></label>
+            <select class="form-select" id="fu-estado" ${propio ? 'disabled' : ''}>
+              <option value="activo"    ${val('estado') === 'activo'    || esNuevo ? 'selected' : ''}>Activo</option>
+              <option value="bloqueado" ${val('estado') === 'bloqueado' ? 'selected' : ''}>Bloqueado</option>
+              <option value="inactivo"  ${val('estado') === 'inactivo'  ? 'selected' : ''}>Inactivo</option>
+            </select>
+          </div>
+          <div class="col-md-6 mb-3" data-campo="password">
+            <label class="form-label">Contrasena ${esNuevo ? '<span class="text-danger">*</span>' : ''}</label>
+            <input type="password" class="form-control" id="fu-password" maxlength="100"
+                   placeholder="${esNuevo ? 'Minimo 8 caracteres' : 'Dejar vacio para mantener la actual'}">
+          </div>
+        </div>
+        ${propio ? '<div class="alert alert-info py-2 small mb-0">No puede cambiar su propio usuario, rol ni estado.</div>' : ''}
+        <div class="d-flex justify-content-end gap-2 mt-3">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btn-guardar-usuario"><i class="bi bi-check-lg"></i> Guardar</button>
+        </div>
+      </form>`;
+
+      Modal.abrir(esNuevo ? 'Nuevo usuario' : 'Editar usuario — ' + fila.usuario, html);
+
+      $('#btn-guardar-usuario').on('click', () => this._guardar());
+      $('#form-usuario').on('submit', e => { e.preventDefault(); this._guardar(); });
+    });
+  },
+
+  _guardar() {
+    const datos = {
+      id:              $('#form-usuario').data('id') || 0,
+      usuario:         $.trim($('#fu-usuario').val() || ''),
+      nombre_completo: $.trim($('#fu-nombre').val() || ''),
+      rol_id:          $('#fu-rol').val() || '',
+      personal_id:     $('#fu-personal').val() || '',
+      correo:          $.trim($('#fu-correo').val() || ''),
+      estado:          $('#fu-estado').val() || 'activo',
+      password:        $('#fu-password').val() || ''
+    };
+
+    Api.post('api/usuarios/guardar.php', datos)
+      .then(() => { Modal.cerrar(); this.tabla.draw(); })
+      .catch(err => {
+        if (err && err.cuerpo && err.cuerpo.errors) pintarErroresForm('#form-usuario', err.cuerpo.errors);
+      });
+  },
+
+  _abrirPass(fila) {
+    const html = `
+      <form id="form-pass" autocomplete="off" data-id="${fila.id}">
+        <div class="alert alert-secondary py-2 small">
+          Restablecer la contrasena de <strong>${esc(fila.usuario)}</strong>.
+          Se reinician los intentos fallidos automaticamente.
+        </div>
+        <div class="mb-3" data-campo="password">
+          <label class="form-label">Nueva contrasena <span class="text-danger">*</span></label>
+          <input type="password" class="form-control" id="fp-password" maxlength="100">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Repetir contrasena <span class="text-danger">*</span></label>
+          <input type="password" class="form-control" id="fp-password2" maxlength="100">
+        </div>
+        <div class="d-flex justify-content-end gap-2">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btn-guardar-pass"><i class="bi bi-key"></i> Guardar contrasena</button>
+        </div>
+      </form>`;
+
+    Modal.abrir('Cambiar contrasena — ' + fila.usuario, html);
+
+    $('#btn-guardar-pass').on('click', () => {
+      const p1 = $('#fp-password').val(), p2 = $('#fp-password2').val();
+      if (p1.length < 8) { Toast.error('La contrasena debe tener al menos 8 caracteres.'); return; }
+      if (p1 !== p2)     { Toast.error('Las contrasenas no coinciden.'); return; }
+      Api.post('api/usuarios/password.php', { id: fila.id, password: p1 })
+        .then(() => Modal.cerrar());
+    });
+  },
+
+  _cambiarEstado(fila, estado, verbo) {
+    Swal.fire({
+      title: '¿' + verbo.charAt(0).toUpperCase() + verbo.slice(1) + ' a ' + esc(fila.usuario) + '?',
+      text: estado === 'bloqueado'
+        ? 'El usuario no podra iniciar sesion hasta que se active nuevamente.'
+        : 'El usuario podra iniciar sesion normalmente.',
+      icon: 'question', showCancelButton: true,
+      confirmButtonText: 'Si, continuar', cancelButtonText: 'Cancelar', confirmButtonColor: '#2563eb'
+    }).then(r => {
+      if (!r.isConfirmed) return;
+      Api.post('api/usuarios/estado.php', { id: fila.id, estado: estado })
+        .then(() => this.tabla.draw());
+    });
+  }
+};
+
+App.registrar('usuarios', Usuarios);
+'@
+[IO.File]::WriteAllText("$base\assets\js\app\usuarios.js", $j3, $utf8); Write-Host "OK: assets\js\app\usuarios.js" -ForegroundColor Green
+
+Write-Host "`n>>> SCRIPT B COMPLETO: 3 archivos JS regenerados <<<" -ForegroundColor Green

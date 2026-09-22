@@ -1,18 +1,16 @@
 <?php
 // ============================================================
 // SIGTI - Arranque del sistema
-// TODOS los endpoints API comienzan con:
-//   require_once __DIR__ . '/../../core/bootstrap.php';
 // ============================================================
 require_once dirname(__DIR__) . '/config/config.php';
 
-// ---- Autoload de Composer (si existe) ----
+ob_start();
+
  $vendorAutoload = ROOT_PATH . '/vendor/autoload.php';
 if (is_file($vendorAutoload)) {
     require_once $vendorAutoload;
 }
 
-// ---- Autocarga de respaldo: core/, models/ y services/ ----
 spl_autoload_register(function (string $clase): void {
     foreach (['core', 'models', 'services'] as $dir) {
         $archivo = ROOT_PATH . '/' . $dir . '/' . $clase . '.php';
@@ -33,8 +31,8 @@ spl_autoload_register(function (string $clase): void {
     );
 });
 
-// ---- Excepciones sin capturar -> respuesta clara ----
 set_exception_handler(function (Throwable $e): void {
+    while (ob_get_level() > 0) { @ob_end_clean(); }
     error_log('[SIGTI] ' . $e->getMessage() . ' | ' . $e->getFile() . ':' . $e->getLine());
     $uri  = $_SERVER['REQUEST_URI'] ?? '';
     $ajax = (strpos($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '', 'XMLHttpRequest') !== false)
@@ -59,5 +57,4 @@ set_exception_handler(function (Throwable $e): void {
     exit;
 });
 
-// ---- La sesion SIEMPRE iniciada en cada peticion ----
 Auth::startSession();

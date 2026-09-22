@@ -20,9 +20,8 @@ const Router = {
   },
 
   // vistas que aún no existen → panel "en construcción" con su paso
-  EN_CONSTRUCCION: {
-    'usuarios/lista': 4, 'configuracion/principal': 4,
-    'personal/lista': 5, 'equipos/lista': 6,
+   EN_CONSTRUCCION: {
+    'equipos/lista': 6,
     'tickets/lista': 7, 'mantenimiento/lista': 8,
     'asignaciones/lista': 9, 'reportes/principal': 11, 'auditoria/lista': 12
   },

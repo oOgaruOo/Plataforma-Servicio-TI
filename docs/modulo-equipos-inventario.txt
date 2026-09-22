@@ -1,0 +1,9 @@
+Plataforma-Servicio-TI\
+├── api\equipos\
+│   ├── listar.php · guardar.php · detalle.php · baja.php
+│   ├── accesorio.php     (agregar / quitar accesorio AJAX)
+│   ├── licencia.php      (agregar / quitar licencia AJAX)
+│   └── select.php        (equipos disponibles para otros módulos)
+├── views\equipos\lista.php
+├── assets\js\app\equipos.js
+└── (ediciones: index.php, router.js, sigti.css)

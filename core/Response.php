@@ -1,12 +1,13 @@
 <?php
 // ============================================================
-// SIGTI - Estandariza TODAS las respuestas JSON del sistema
+// SIGTI - Estandariza TODAS las respuestas JSON
 // ============================================================
 
 class Response
 {
     private static function json(array $arr, int $code = 200): void
     {
+        while (ob_get_level() > 0) { @ob_end_clean(); }
         http_response_code($code);
         header('Content-Type: application/json; charset=utf-8');
         header('Cache-Control: no-store');

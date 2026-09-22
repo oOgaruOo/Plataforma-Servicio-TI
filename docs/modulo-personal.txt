@@ -1,0 +1,12 @@
+Plataforma-Servicio-TI\
+├── api\personal\
+│   ├── listar.php        (DataTables server-side + filtros)
+│   ├── guardar.php       (alta + edición)
+│   ├── detalle.php       (ficha + checklist de la persona)
+│   ├── checklist.php     (marcar/desmarcar ítems — guardado inmediato)
+│   └── eliminar.php      (borrado lógico: solo pre_ingreso sin datos)
+├── views\personal\
+│   └── lista.php         (tabla + barra de filtros)
+├── assets\js\app\
+│   └── personal.js       (módulo completo)
+└── (edición: index.php → agregar script personal.js)

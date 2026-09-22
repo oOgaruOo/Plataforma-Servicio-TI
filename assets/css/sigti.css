@@ -104,3 +104,43 @@ body.sidebar-oculto #contenido{margin-left:0}
   #vista-container{padding:16px}
   #topbar{padding:0 14px}
 }
+
+/* ---------- Paso 4: catálogos y usuarios ---------- */
+.form-error{color:#dc2626;font-size:12.5px;margin-top:4px}
+.swatch{display:inline-block;width:15px;height:15px;border-radius:4px;
+  border:1px solid rgba(0,0,0,.15);vertical-align:-3px;margin-right:6px}
+#modal-general .form-label{font-size:13.5px;font-weight:600;color:#374151;margin-bottom:4px}
+table.dataTable thead th{white-space:nowrap}
+
+/* ---------- Paso 5: personal + checklist ---------- */
+.badge-estado-personal{font-size:11.5px}
+.item-checklist{border:1px solid var(--borde);border-radius:10px;padding:12px 14px;
+  display:flex;gap:12px;align-items:flex-start;transition:background .15s,border-color .15s}
+.item-checklist:hover{background:#f8fafc}
+.item-checklist.completado{background:#f0fdf4;border-color:#bbf7d0}
+.item-checklist.completado .item-texto{text-decoration:line-through;color:#64748b}
+.item-check input{width:20px;height:20px;margin-top:2px;cursor:pointer}
+.item-texto{font-weight:600;font-size:14px;color:#1e293b}
+.item-meta{font-size:12px;color:#94a3b8;margin-top:2px}
+.item-obs{margin-top:6px}
+.progress{height:8px;border-radius:4px}
+.progress-bar{background:var(--azul)}
+.tabla-mini th{background:#f1f5f9;font-size:12.5px}
+.tabla-mini td{font-size:13px}
+
+/* ---------- Paso 6: equipos / inventario ---------- */
+.timeline{position:relative;padding-left:26px;max-height:420px;overflow-y:auto}
+.timeline::before{content:'';position:absolute;left:8px;top:4px;bottom:4px;width:2px;background:#e2e8f0}
+.tl-item{position:relative;margin-bottom:14px}
+.tl-item::before{content:'';position:absolute;left:-22px;top:5px;width:10px;height:10px;
+  border-radius:50%;background:var(--azul);border:2px solid #fff;box-shadow:0 0 0 2px #cbd5e1}
+.tl-item.tl-baja::before{background:#dc2626}
+.tl-item.tl-ok::before{background:#16a34a}
+.tl-titulo{font-weight:600;font-size:13.5px;color:#1e293b}
+.tl-fecha{font-size:11.5px;color:#94a3b8}
+.tl-detalle{font-size:12.5px;color:#64748b}
+.mini-stat{border:1px solid var(--borde);border-radius:10px;padding:10px 12px;text-align:center;background:#fff}
+.mini-stat .n{font-size:22px;font-weight:700;color:#1e293b}
+.mini-stat .t{font-size:11.5px;color:#64748b}
+.fila-dinamica{display:flex;gap:6px;margin-bottom:6px}
+.nowrap{white-space:nowrap}
