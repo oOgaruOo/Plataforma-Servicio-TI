@@ -46,7 +46,8 @@ const COL_ACCIONES = {
   data: null, orderable: false, className: 'text-nowrap text-center',
   render: () =>
     '<button class="btn btn-sm btn-outline-primary btn-editar me-1" title="Editar"><i class="bi bi-pencil"></i></button>' +
-    '<button class="btn btn-sm btn-outline-secondary btn-toggle" title="Activar / desactivar"><i class="bi bi-power"></i></button>'
+    '<button class="btn btn-sm btn-outline-secondary btn-toggle" title="Activar / desactivar"><i class="bi bi-power"></i></button>' +
+    '<button class="btn btn-sm btn-outline-danger btn-eliminar" title="Eliminar definitivamente"><i class="bi bi-trash"></i></button>'
 };
 
 const Catalogos = {
@@ -168,11 +169,12 @@ const Catalogos = {
     });
 
     Object.keys(this.CONFIG).forEach(tipo => {
-      $('#tb-' + tipo).on('click', '.btn-editar, .btn-toggle', function () {
+      $('#tb-' + tipo).on('click', '.btn-editar, .btn-toggle, .btn-eliminar', function () {
         if (!self.tablas[tipo]) return;
         const fila = self.tablas[tipo].row($(this).closest('tr')).data();
         if (!fila) return;
         if ($(this).hasClass('btn-editar')) self._abrirForm(tipo, fila);
+        else if ($(this).hasClass('btn-eliminar')) self._eliminar(tipo, fila);
         else                                self._toggle(tipo, fila);
       });
     });
@@ -281,6 +283,20 @@ const Catalogos = {
       });
   },
 
+  _eliminar(tipo, fila) {
+    Swal.fire({
+      title: '¿Eliminar este registro?',
+      html: '<b>' + esc(fila.nombre) + '</b><br><small>Solo es posible si ningún otro registro lo utiliza. ' +
+            'Si ya se usó, desactívelo (botón de encendido) para conservar el historial.</small>',
+      icon: 'warning', showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#dc2626'
+    }).then(r => {
+      if (!r.isConfirmed) return;
+      Api.post('api/catalogos/eliminar.php', { tipo: tipo, id: fila.id })
+        .then(() => this.tablas[tipo].draw());
+    });
+  },
   _toggle(tipo, fila) {
     const activo = (+fila.activo === 1 || fila.estado === 'activo');
     const verbo  = activo ? 'desactivar' : 'activar';

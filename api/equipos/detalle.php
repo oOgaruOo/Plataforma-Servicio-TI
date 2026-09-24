@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// SIGTI - Ficha completa del equipo + historial + asignacion activa
+// SIGTI - Ficha completa del equipo (incluye familia)
 // ============================================================
 require_once __DIR__ . '/../../core/bootstrap.php';
 
@@ -11,7 +11,7 @@ Auth::requirePermission('equipos', 'ver');
 if ($id === 0) Response::error('Equipo no especificado.');
 
  $e = Database::getOne(
-    "SELECT e.*, t.nombre AS tipo
+    "SELECT e.*, t.nombre AS tipo, t.familia
      FROM equipos e
      INNER JOIN tipo_equipos t ON t.id = e.tipo_equipo_id
      WHERE e.id = ?",
@@ -19,7 +19,6 @@ if ($id === 0) Response::error('Equipo no especificado.');
 );
 if (!$e) Response::error('El equipo no existe.');
 
-// asignacion activa (puede ser a persona o a area)
  $asignacion = Database::getOne(
     "SELECT a.id, a.tipo, a.estado, a.fecha_entrega, a.fecha_devolucion_esperada,
             p.nombres AS p_nombres, p.apellidos AS p_apellidos,
@@ -32,7 +31,6 @@ if (!$e) Response::error('El equipo no existe.');
     [$id]
 );
 
-// costos acumulados de mantenimiento (para decision reparar/comprar)
  $costoMant = (float) (Database::getValue(
     "SELECT COALESCE(SUM(costo_total),0) FROM mantenimientos WHERE equipo_id = ? AND estado NOT IN ('cancelado')",
     [$id]) ?? 0);
@@ -47,8 +45,8 @@ if (!$e) Response::error('El equipo no existe.');
      FROM equipo_historial h
      LEFT JOIN usuarios u ON u.id = h.usuario_id
      WHERE h.equipo_id = ? ORDER BY h.id DESC LIMIT 50", [$id]);
- $e['asignacion']      = $asignacion;
- $e['costo_mant_total']= $costoMant;
- $e['veces_mant']      = $vecesMant;
+ $e['asignacion']       = $asignacion;
+ $e['costo_mant_total'] = $costoMant;
+ $e['vecesMant']        = $vecesMant;
 
 Response::ok($e);

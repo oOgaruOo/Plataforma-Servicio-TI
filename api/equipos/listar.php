@@ -1,6 +1,8 @@
 <?php
 // ============================================================
-// SIGTI - Equipos: DataTables server-side + filtros + metricas
+// SIGTI - Equipos: DataTables server-side + filtros
+// VERSION CORREGIDA: termina en Response::datatable().
+// Las metricas van en api/equipos/stats.php (aparte).
 // ============================================================
 require_once __DIR__ . '/../../core/bootstrap.php';
 
@@ -9,9 +11,9 @@ try {
     Csrf::validate();
     Auth::requirePermission('equipos', 'ver');
 
-    $fEstado = $_POST['f_estado'] ?? '';
-    $fTipo   = (int)($_POST['f_tipo'] ?? 0);
-    $fGarantia = (int)($_POST['f_garantia'] ?? 0);   // 1 = garantía por vencer (90 días)
+    $fEstado   = $_POST['f_estado'] ?? '';
+    $fTipo     = (int)($_POST['f_tipo'] ?? 0);
+    $fGarantia = (int)($_POST['f_garantia'] ?? 0);
 
     $where  = [];
     $params = [];
@@ -33,16 +35,15 @@ try {
     }
     $cond = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
 
-    $base = "SELECT e.id, e.codigo, e.marca, e.modelo, e.nro_serie, e.activo_fijo,
+    $base = "SELECT e.id, e.codigo, e.tipo_equipo_id, e.marca, e.modelo, e.nro_serie, e.activo_fijo,
                     e.estado, e.condicion, e.fecha_compra, e.costo, e.garantia_hasta,
                     e.ubicacion, e.especificaciones,
                     t.nombre AS tipo,
-                    CONCAT(a.personal_nombres, ' ', a.personal_apellidos) AS asignado_a,
-                    a.fecha_entrega AS asignado_desde
+                    CONCAT(a.personal_nombres, ' ', a.personal_apellidos) AS asignado_a
              FROM equipos e
              INNER JOIN tipo_equipos t ON t.id = e.tipo_equipo_id
              LEFT JOIN (
-                 SELECT asig.equipo_id, asig.fecha_entrega, asig.estado AS asig_estado,
+                 SELECT asig.equipo_id, asig.fecha_entrega,
                         p.nombres AS personal_nombres, p.apellidos AS personal_apellidos
                  FROM asignaciones asig
                  LEFT JOIN personal p ON p.id = asig.personal_id
@@ -66,7 +67,7 @@ try {
 
     $total = (int) Database::getValue("SELECT COUNT(*) FROM ($base) x", $params);
 
-    $paramsCon = $params;
+    $paramsCon  = $params;
     $whereExtra = '';
     if ($busqueda !== '') {
         $partes = [];
@@ -84,19 +85,7 @@ try {
         $paramsCon
     );
 
-    // metricas para las mini-tarjetas (mismo filtro de tipo, sin estado)
-    $condStats = $fTipo > 0 ? ' WHERE e.tipo_equipo_id = ' . $fTipo : '';
-    $stats = [
-        'stock'   => (int) Database::getValue("SELECT COUNT(*) FROM equipos e $condStats" . ($fTipo ? " AND e.estado='en_stock'" : " WHERE e.estado='en_stock'")),
-        'asignados' => (int) Database::getValue("SELECT COUNT(*) FROM equipos e WHERE e.estado IN ('asignado','en_prestamo')" . ($fTipo ? " AND e.tipo_equipo_id=$fTipo" : '')),
-        'mantenimiento' => (int) Database::getValue("SELECT COUNT(*) FROM equipos e WHERE e.estado IN ('en_mantenimiento','en_reparacion_externa','en_revision')" . ($fTipo ? " AND e.tipo_equipo_id=$fTipo" : '')),
-        'baja'    => (int) Database::getValue("SELECT COUNT(*) FROM equipos e WHERE e.estado='dado_de_baja'" . ($fTipo ? " AND e.tipo_equipo_id=$fTipo" : '')),
-        'garantia' => (int) Database::getValue("SELECT COUNT(*) FROM equipos e WHERE e.garantia_hasta IS NOT NULL AND e.garantia_hasta >= CURDATE() AND e.garantia_hasta <= DATE_ADD(CURDATE(), INTERVAL 90 DAY) AND e.estado <> 'dado_de_baja'" . ($fTipo ? " AND e.tipo_equipo_id=$fTipo" : '')),
-    ];
-
-    // metricas por endpoint aparte (ver api/equipos/stats.php)
-    
-    $respuesta = Response::datatable($draw, $total, $filtrados, $filas);
+    Response::datatable($draw, $total, $filtrados, $filas);
 
 } catch (Throwable $e) {
     Response::error('equipos/listar: ' . $e->getMessage()

@@ -144,3 +144,51 @@ table.dataTable thead th{white-space:nowrap}
 .mini-stat .t{font-size:11.5px;color:#64748b}
 .fila-dinamica{display:flex;gap:6px;margin-bottom:6px}
 .nowrap{white-space:nowrap}
+/* ---------- Paso 6B: accesorios seleccionables ---------- */
+.acc-check{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--borde);
+  border-radius:20px;padding:6px 14px;margin:0 6px 8px 0;cursor:pointer;
+  background:#fff;font-size:13.5px;transition:all .15s;user-select:none}
+.acc-check input{width:16px;height:16px;cursor:pointer;margin:0}
+.acc-check:hover{border-color:#93c5fd;background:#eff6ff}
+.acc-check.marcado{background:#2563eb;color:#fff;border-color:#2563eb}
+.acc-chip{display:inline-flex;align-items:center;gap:6px;background:#e0f2fe;color:#075985;
+  border:1px solid #bae6fd;border-radius:20px;padding:5px 12px;margin:0 6px 8px 0;font-size:13px}
+.acc-chip button{background:none;border:0;color:#0369a1;font-size:15px;line-height:1;cursor:pointer;padding:0}
+.acc-seccion{border:1px solid var(--borde);border-radius:10px;padding:14px;margin-bottom:12px;background:#fafbfd}
+
+/* ---------- Paso 7: tickets ---------- */
+.ticket-estado{font-size:11.5px}
+.sla-timer{font-family:Consolas,monospace;font-size:12.5px;font-weight:700}
+.sla-ok{color:#16a34a}.sla-warn{color:#d97706}.sla-vencido{color:#dc2626}
+.comentario{border:1px solid var(--borde);border-radius:10px;padding:10px 14px;margin-bottom:10px;background:#fff}
+.comentario.c-interno{background:#fefce8;border-color:#fde68a}
+.comentario.c-usuario{background:#eff6ff;border-color:#bfdbfe}
+.c-autor{font-weight:600;font-size:13px;color:#1e293b}
+.c-fecha{font-size:11.5px;color:#94a3b8}
+.c-mensaje{font-size:13.5px;margin-top:4px;white-space:pre-wrap}
+.adj-lista .badge{cursor:pointer}
+/* ---------- Paso 8: mantenimiento ---------- */
+.mt-estado{font-size:11.5px}
+.ev-grid{display:flex;flex-wrap:wrap;gap:12px}
+.ev-thumb{width:150px;border:1px solid var(--borde);border-radius:10px;overflow:hidden;background:#fff}
+.ev-thumb .ev-img{height:100px;display:flex;align-items:center;justify-content:center;
+  background:#f1f5f9;color:#64748b;font-size:26px;cursor:pointer;text-decoration:none}
+.ev-thumb .ev-img img{width:100%;height:100%;object-fit:cover}
+.ev-thumb .ev-meta{padding:6px 8px;font-size:11.5px;color:#64748b}
+.ev-thumb .ev-tipo{display:inline-block;font-size:10.5px;padding:1px 8px;border-radius:10px;
+  margin-bottom:2px;color:#fff;background:#64748b}
+.ev-tipo.antes{background:#dc2626}.ev-tipo.despues{background:#16a34a}
+.costos-box{background:#f8fafc;border:1px solid var(--borde);border-radius:10px;padding:12px 16px}
+/* ---------- Importar Excel: vista previa ---------- */
+.imp-preview{max-height:340px;overflow:auto;border:1px solid var(--borde);border-radius:8px}
+.imp-preview table{margin:0;font-size:12px;min-width:100%}
+.imp-preview th{position:sticky;top:0;background:#1e2732;color:#fff;padding:6px 8px;white-space:nowrap}
+.imp-preview td{padding:4px 8px;border-bottom:1px solid #eee;white-space:nowrap;max-width:180px;
+  overflow:hidden;text-overflow:ellipsis}
+.imp-fila-err td{background:#fef2f2}
+.imp-estado{font-size:11px}
+/* ---------- Foto de usuario (login + topbar) ---------- */
+.login-foto{width:92px;height:92px;border-radius:50%;overflow:hidden;margin:0 auto 8px;
+  border:3px solid #e5e9f0;box-shadow:0 4px 14px rgba(0,0,0,.15);background:#fff}
+.login-foto img{width:100%;height:100%;object-fit:cover}
+.login-foto.hidden{display:none}

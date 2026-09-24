@@ -14,13 +14,13 @@ Auth::requirePermission('equipos', 'editar');
 
  $equipo = Database::getOne('SELECT id, estado, codigo FROM equipos WHERE id = ?', [$equipoId]);
 if (!$equipo)  Response::error('El equipo no existe.');
-if ($equipo['estado'] === 'dado_de_baja') Response::error('Equipo dado de baja: registro histórico.');
+if ($equipo['estado'] === 'dado_de_baja') Response::error('Equipo dado de baja: registro historico.');
 
 if ($accion === 'agregar') {
     $v = Validator::make($_POST, [
-        'software' => 'required|maxlen:80',
-        'clave'    => 'maxlen:150',
-        'tipo'     => 'in:perpetua,suscripcion,oem',
+        'software'          => 'required|maxlen:80',
+        'clave'             => 'maxlen:150',
+        'tipo'              => 'in:perpetua,suscripcion,oem',
         'fecha_inicio'      => 'date',
         'fecha_vencimiento' => 'date',
         'costo'             => 'numeric|max:9999999',
@@ -61,5 +61,5 @@ if ($accion === 'agregar') {
     Auditoria::registrar('eliminar', 'equipo_licencias', $licenciaId, $lic, null);
     Response::ok(null, 'Licencia retirada.');
 } else {
-    Response::error('Acción inválida.');
+    Response::error('Accion invalida.');
 }

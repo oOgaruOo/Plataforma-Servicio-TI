@@ -20,14 +20,15 @@ if (!$puede):
       <thead>
         <tr>
           <th>Usuario</th><th>Nombre completo</th><th>Rol</th><th>Personal vinculado</th>
-          <th>Correo</th><th>Ultimo acceso</th><th>Estado</th><th>&nbsp;</th>
+          <th>Celular</th><th>Correo</th><th>Ultimo acceso</th><th>Estado</th><th>&nbsp;</th>
         </tr>
       </thead>
     </table>
     <div class="text-muted small mt-2">
       <i class="bi bi-info-circle"></i>
-      Los roles definen que modulos ve cada cuenta. Un usuario <b>bloqueado</b> no puede iniciar sesion.
-      El campo «personal vinculado» conecta la cuenta con el registro del Modulo de Personal (Paso 5).
+      <b>Editar</b>: datos, rol, celular y <b>foto</b> (se muestra al iniciar sesion).
+      <b>Restablecer</b> contrasena · <b>Escudo</b>: permisos por modulo (conceder/revocar al detalle).
+      Un usuario <b>bloqueado</b> no puede iniciar sesion.
     </div>
   </div>
 </div>

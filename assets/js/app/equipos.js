@@ -1,13 +1,13 @@
 // ============================================================
-// SIGTI - Modulo Equipos / Inventario
-// Reusa: esc(), Badges, pintarErroresForm(), DT, Modal, Api
+// SIGTI - Modulo Equipos v3: inventario + seleccion multiple
+// + etiquetas con CODIGO DE BARRAS (JsBarcode)
 // ============================================================
 
 const ESTADOS_EQUIPO = {
   en_stock:             { txt: 'En stock',        cls: 'text-bg-success' },
   asignado:             { txt: 'Asignado',        cls: 'text-bg-primary' },
-  en_prestamo:          { txt: 'Préstamo',        cls: 'text-bg-info' },
-  en_revision:          { txt: 'En revisión',     cls: 'text-bg-warning text-dark' },
+  en_prestamo:          { txt: 'Prestamo',        cls: 'text-bg-info' },
+  en_revision:          { txt: 'En revision',     cls: 'text-bg-warning text-dark' },
   en_mantenimiento:     { txt: 'Mantenimiento',   cls: 'text-bg-warning text-dark' },
   en_reparacion_externa:{ txt: 'Repar. externa',  cls: 'text-bg-warning text-dark' },
   obsoleto:             { txt: 'Obsoleto',        cls: 'text-bg-secondary' },
@@ -16,8 +16,56 @@ const ESTADOS_EQUIPO = {
 
 const CONDICIONES_EQ = {
   nuevo: 'Nuevo', bueno: 'Bueno', regular: 'Regular',
-  danado: 'Dañado', irreparable: 'Irreparable'
+  danado: 'Danado', irreparable: 'Irreparable'
 };
+
+const FAMILIAS = {
+  computo:   { nombre: 'Equipos de computo', campos: [
+    { k:'cpu', label:'Procesador', ph:'Ej: Core i5-1235U' },
+    { k:'ram', label:'Memoria RAM', ph:'Ej: 16 GB DDR4' },
+    { k:'disco', label:'Disco / almacenamiento', ph:'Ej: SSD 512 GB NVMe' },
+    { k:'so', label:'Sistema operativo', ph:'Ej: Windows 11 Pro' },
+    { k:'grafica', label:'Tarjeta grafica', ph:'Ej: Integrada / RTX 2050' } ] },
+  movil:     { nombre: 'Equipos moviles', campos: [
+    { k:'so', label:'Sistema operativo', ph:'Ej: Android 14' },
+    { k:'almacenamiento', label:'Almacenamiento', ph:'Ej: 128 GB' },
+    { k:'pantalla', label:'Pantalla', ph:'Ej: 6.5 AMOLED' },
+    { k:'linea', label:'Linea telefonica', ph:'Ej: 987654321' },
+    { k:'plan', label:'Plan de datos', ph:'Ej: Postpago 20GB' } ] },
+  impresion: { nombre: 'Impresion e imagen', campos: [
+    { k:'tecnologia', label:'Tecnologia', tipo:'select', opts:['Laser','Inyeccion de tinta','Matricial','Termica','LED'] },
+    { k:'color', label:'Impresion a color', tipo:'select', opts:['No (B/N)','Si'] },
+    { k:'conexion', label:'Conexion', tipo:'select', opts:['USB','Red (Ethernet)','WiFi','USB + Red','USB + WiFi'] },
+    { k:'consumible', label:'Consumible / repuesto', ph:'Ej: Toner HP 106A' },
+    { k:'rendimiento', label:'Rendimiento mensual', ph:'Ej: 1500 paginas' },
+    { k:'duplex', label:'Impresion duplex', tipo:'select', opts:['No','Si'] } ] },
+  red:       { nombre: 'Equipos de red', campos: [
+    { k:'puertos', label:'Puertos', ph:'Ej: 8 puertos RJ45' },
+    { k:'velocidad', label:'Velocidad', ph:'Ej: Gigabit' },
+    { k:'ip_gestion', label:'IP de gestion', ph:'Ej: 192.168.1.1' },
+    { k:'banda', label:'Banda WiFi', ph:'Ej: 2.4 / 5 GHz' },
+    { k:'rack', label:'Montable en rack', tipo:'select', opts:['No','Si'] } ] },
+  energia:   { nombre: 'Energia electrica', campos: [
+    { k:'capacidad_va', label:'Capacidad (VA)', ph:'Ej: 750 VA' },
+    { k:'potencia_w', label:'Potencia (W)', ph:'Ej: 500 W' },
+    { k:'baterias', label:'Baterias', ph:'Ej: 1 bateria 12V 9Ah' },
+    { k:'tomas', label:'Tomacorrientes', ph:'Ej: 6 tomas' } ] },
+  visual:    { nombre: 'Visualizacion', campos: [
+    { k:'pulgadas', label:'Pulgadas', ph:'Ej: 24 pulgadas' },
+    { k:'resolucion', label:'Resolucion', ph:'Ej: 1920x1080' },
+    { k:'panel', label:'Panel / tecnologia', tipo:'select', opts:['IPS','VA','TN','OLED','DLP','LCD','LED'] },
+    { k:'video', label:'Conexion de video', ph:'Ej: HDMI + VGA' } ] },
+  periferico:{ nombre: 'Perifericos', campos: [
+    { k:'conexion_p', label:'Conexion', tipo:'select', opts:['USB','Inalambrico','Bluetooth','PS/2','Jack 3.5 mm'] } ] },
+  telefonia: { nombre: 'Telefonia', campos: [
+    { k:'extension', label:'Extension / linea', ph:'Ej: 101' },
+    { k:'ip_tel', label:'IP del telefono', ph:'Ej: 192.168.1.50' },
+    { k:'canales', label:'Canales / lineas', ph:'Ej: 2' } ] },
+  otro:      { nombre: 'Otros equipos TI', campos: [
+    { k:'descripcion_tecnica', label:'Descripcion tecnica', ph:'Ej: Camara IP 4MP dome POE' } ] }
+};
+
+const EQUIPOS_ = { _specs: {}, _accSel: [] };
 
 const Equipos = {
 
@@ -31,6 +79,8 @@ const Equipos = {
         f_garantia: $('#ef-garantia').val() || 0
       }),
       [
+        { data: null, orderable: false, className: 'text-center',
+          render: (v, t, f) => '<input type="checkbox" class="form-check-input chk-etq" data-id="' + f.id + '">' },
         { data: 'codigo', render: v => '<strong class="nowrap">' + esc(v) + '</strong>' },
         { data: 'tipo' },
         { data: null, render: (v, t, f) => esc(f.marca) + (f.modelo ? ' ' + esc(f.modelo) : '') },
@@ -60,13 +110,13 @@ const Equipos = {
               h += '<button class="btn btn-sm btn-outline-secondary btn-editar me-1" title="Editar"><i class="bi bi-pencil"></i></button>';
             if (!cesado && App.permisos.includes('equipos.baja'))
               h += '<button class="btn btn-sm btn-outline-danger btn-baja" title="Dar de baja"><i class="bi bi-trash3"></i></button>';
+            h += '<button class="btn btn-sm btn-outline-dark btn-etiqueta" title="Etiqueta con código de barras"><i class="bi bi-upc-scan"></i></button>';
             return h;
           } }
       ]);
 
     this._cargarStats();
 
-    // ---- Filtros ----
     $('#btn-filtrar-equipos').on('click', () => { this.tabla.draw(); this._cargarStats(); });
     $('#ef-estado, #ef-tipo, #ef-garantia').on('change', () => { this.tabla.draw(); this._cargarStats(); });
     $('#btn-limpiar-equipos').on('click', () => {
@@ -76,13 +126,39 @@ const Equipos = {
 
     $('#btn-nuevo-equipo').on('click', () => this._abrirForm(null));
 
-    $('#tb-equipos').on('click', '.btn-ver, .btn-editar, .btn-baja', function () {
+    // ---- etiquetas: seleccion multiple ----
+    $('#btn-etiquetas-lote').on('click', () => this._etiquetasLote());
+    $('#tb-equipos').on('change', 'thead .chk-todos', function () {
+      const marcado = $(this).is(':checked');
+      $('#tb-equipos tbody .chk-etq').prop('checked', marcado);
+      Equipos._contarSel();
+    });
+    $('#tb-equipos').on('change', '.chk-etq', () => this._contarSel());
+
+    $('#tb-equipos').on('click', '.btn-ver, .btn-editar, .btn-baja, .btn-etiqueta', function () {
       const fila = Equipos.tabla.row($(this).closest('tr')).data();
       if (!fila) return;
-      if      ($(this).hasClass('btn-ver'))    Equipos._verDetalle(fila.id);
-      else if ($(this).hasClass('btn-editar')) Equipos._abrirForm(fila);
-      else                                      Equipos._abrirBaja(fila);
+      if      ($(this).hasClass('btn-ver'))      Equipos._verDetalle(fila.id);
+      else if ($(this).hasClass('btn-editar'))   Equipos._abrirForm(fila);
+      else if ($(this).hasClass('btn-baja'))     Equipos._abrirBaja(fila);
+      else                                        Equipos._etiquetaIndividual(fila);
     });
+  },
+
+  _contarSel() {
+    const n = $('#tb-equipos tbody .chk-etq:checked').length;
+    $('#btn-etiquetas-lote').prop('disabled', n === 0)
+      .html('<i class="bi bi-upc-scan"></i> Etiquetas (' + n + ')');
+  },
+
+  _etiquetasLote() {
+    const ids = $('#tb-equipos tbody .chk-etq:checked').map((i, el) => $(el).data('id')).get();
+    if (!ids.length) { Toast.warning('Seleccione equipos con los checkboxes.'); return; }
+    window.open(BASE_URL + 'views/equipos/etiquetas.php?ids=' + ids.join(','), '_blank');
+  },
+
+  _etiquetaIndividual(fila) {
+    window.open(BASE_URL + 'views/equipos/etiquetas.php?ids=' + fila.id, '_blank');
   },
 
   _cargarStats() {
@@ -94,55 +170,63 @@ const Equipos = {
     });
   },
 
-  // ================= FICHA COMPLETA =================
+  // ================= FICHA =================
   _verDetalle(id) {
     Api.get('api/equipos/detalle.php', { id: id }).then(e => {
 
       const est = ESTADOS_EQUIPO[e.estado] || { txt: e.estado, cls: 'text-bg-light' };
       const specs = e.especificaciones ? JSON.parse(e.especificaciones) : {};
+      const fam = FAMILIAS[e.familia] || FAMILIAS.otro;
       const puedeEditar = App.permisos.includes('equipos.editar') && e.estado !== 'dado_de_baja';
+
+      let specsHtml = '';
+      Object.keys(specs).forEach(k => {
+        const def = fam.campos.find(c => c.k === k);
+        const label = def ? def.label : k.replace(/_/g, ' ');
+        specsHtml += '<div class="col-6 col-md-3"><div class="border rounded p-2 text-center">' +
+          '<div class="text-muted small">' + esc(label) + '</div>' +
+          '<strong class="small">' + esc(specs[k]) + '</strong></div></div>';
+      });
 
       let html = `
       <div class="d-flex justify-content-between align-items-start mb-2">
         <div>
           <h5 class="mb-1">${esc(e.codigo)} <span class="text-muted small">· ${esc(e.tipo)}</span></h5>
-          <div class="text-muted small">${esc(e.marca)} ${esc(e.modelo || '')} ${e.nro_serie ? '· S/N ' + esc(e.nro_serie) : ''}</div>
+          <div class="text-muted small">${esc(e.marca)} ${esc(e.modelo || '')} ${e.nro_serie ? '· S/N ' + esc(e.nro_serie) : ''}
+            <span class="badge text-bg-light border ms-1">${esc(fam.nombre)}</span></div>
         </div>
-        <span class="badge ${est.cls} badge-estado-personal">${est.txt}</span>
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-sm btn-outline-dark" id="ficha-btn-etiqueta" title="Imprimir etiqueta con código de barras">
+            <i class="bi bi-upc-scan"></i> Etiqueta</button>
+          <span class="badge ${est.cls} badge-estado-personal">${est.txt}</span>
+        </div>
       </div>
 
       ${e.asignacion ? `
         <div class="alert ${e.asignacion.estado === 'vencida' ? 'alert-warning' : 'alert-primary'} py-2 small">
           <i class="bi bi-person-check"></i>
-          <b>${e.asignacion.tipo === 'prestamo' ? 'En préstamo' : 'Asignado'}</b> a
+          <b>${e.asignacion.tipo === 'prestamo' ? 'En prestamo' : 'Asignado'}</b> a
           <b>${esc(e.asignacion.p_nombres ? e.asignacion.p_nombres + ' ' + e.asignacion.p_apellidos : (e.asignacion.area_nombre || '—'))}</b>
           desde ${esc(e.asignacion.fecha_entrega || '')}
-          ${e.asignacion.fecha_devolucion_esperada ? ' · retorno esperado: ' + esc(e.asignacion.fecha_devolucion_esperada) : ''}
-          ${e.asignacion.estado === 'vencida' ? ' · <b>PRÉSTAMO VENCIDO</b>' : ''}
         </div>` : ''}
-      ${e.estado === 'en_stock' ? '<div class="alert alert-success py-2 small mb-2"><i class="bi bi-check-circle"></i> Disponible en stock para asignación.</div>' : ''}
+      ${e.estado === 'en_stock' ? '<div class="alert alert-success py-2 small mb-2"><i class="bi bi-check-circle"></i> Disponible en stock para asignacion.</div>' : ''}
 
       <div class="row g-2 mb-3">
-        <div class="col-6 col-md-3"><div class="border rounded p-2 text-center"><div class="text-muted small">Condición</div><strong>${esc(CONDICIONES_EQ[e.condicion] || '')}</strong></div></div>
+        <div class="col-6 col-md-3"><div class="border rounded p-2 text-center"><div class="text-muted small">Condicion</div><strong>${esc(CONDICIONES_EQ[e.condicion] || '')}</strong></div></div>
         <div class="col-6 col-md-3"><div class="border rounded p-2 text-center"><div class="text-muted small">Compra</div><strong>${esc(e.fecha_compra || '—')}</strong></div></div>
         <div class="col-6 col-md-3"><div class="border rounded p-2 text-center"><div class="text-muted small">Costo</div><strong>${e.costo ? 'S/ ' + Number(e.costo).toLocaleString('es-PE') : '—'}</strong></div></div>
-        <div class="col-6 col-md-3"><div class="border rounded p-2 text-center"><div class="text-muted small">Garantía</div><strong>${esc(e.garantia_hasta || '—')}</strong></div></div>
-        ${specs.cpu   ? '<div class="col-6 col-md-3"><div class="border rounded p-2 text-center"><div class="text-muted small">CPU</div><strong class="small">' + esc(specs.cpu) + '</strong></div></div>'   : ''}
-        ${specs.ram   ? '<div class="col-6 col-md-3"><div class="border rounded p-2 text-center"><div class="text-muted small">RAM</div><strong class="small">' + esc(specs.ram) + '</strong></div></div>'   : ''}
-        ${specs.disco ? '<div class="col-6 col-md-3"><div class="border rounded p-2 text-center"><div class="text-muted small">Disco</div><strong class="small">' + esc(specs.disco) + '</strong></div></div>' : ''}
-        ${specs.so    ? '<div class="col-6 col-md-3"><div class="border rounded p-2 text-center"><div class="text-muted small">S.O.</div><strong class="small">' + esc(specs.so) + '</strong></div></div>'    : ''}
+        <div class="col-6 col-md-3"><div class="border rounded p-2 text-center"><div class="text-muted small">Garantia</div><strong>${esc(e.garantia_hasta || '—')}</strong></div></div>
+        ${specsHtml}
         ${e.imei ? '<div class="col-6 col-md-3"><div class="border rounded p-2 text-center"><div class="text-muted small">IMEI</div><strong class="small">' + esc(e.imei) + '</strong></div></div>' : ''}
-        ${e.mac  ? '<div class="col-6 col-md-3"><div class="border rounded p-2 text-center"><div class="text-muted small">MAC</div><strong class="small">' + esc(e.mac) + '</strong></div></div>'  : ''}
+        ${e.mac  ? '<div class="col-6 col-md-3"><div class="border rounded p-2 text-center"><div class="text-muted small">MAC</div><strong class="small">' + esc(e.mac) + '</strong></div></div>' : ''}
         ${e.activo_fijo ? '<div class="col-6 col-md-3"><div class="border rounded p-2 text-center"><div class="text-muted small">Activo fijo</div><strong class="small">' + esc(e.activo_fijo) + '</strong></div></div>' : ''}
-        ${e.ubicacion  ? '<div class="col-6 col-md-3"><div class="border rounded p-2 text-center"><div class="text-muted small">Ubicación</div><strong class="small">' + esc(e.ubicacion) + '</strong></div></div>'  : ''}
+        ${e.ubicacion  ? '<div class="col-6 col-md-3"><div class="border rounded p-2 text-center"><div class="text-muted small">Ubicacion</div><strong class="small">' + esc(e.ubicacion) + '</strong></div></div>' : ''}
       </div>
 
       ${e.vecesMant > 0 ? `
       <div class="alert ${e.costo_mant_total > (e.costo || 0) ? 'alert-danger' : 'alert-light border'} py-2 small">
         <i class="bi bi-tools"></i> Mantenimientos: <b>${e.vecesMant}</b> ·
         Costo acumulado: <b>S/ ${Number(e.costo_mant_total).toLocaleString('es-PE')}</b>
-        ${e.costo ? ' de un equipo de S/ ' + Number(e.costo).toLocaleString('es-PE') : ''}
-        ${e.costo_mant_total > (e.costo || 0) ? ' · <b>⚠ El gasto supera el valor del equipo: evaluar renovación</b>' : ''}
       </div>` : ''}
 
       <ul class="nav nav-tabs mb-2" role="tablist">
@@ -158,12 +242,14 @@ const Equipos = {
 
       Modal.abrir('Ficha del equipo', html, 'modal-xl');
 
-      if (puedeEditar) this._bindearGestionDetalle(e.id);
+      $('#ficha-btn-etiqueta').on('click', () => this._etiquetaIndividual(e));
+
+      if (puedeEditar) this._bindearGestionDetalle(e.id, e.familia);
     });
   },
 
   _htmlAccesorios(e) {
-    let h = '<div class="tabla-mini-wrap"><table class="table tabla-mini table-sm table-bordered">';
+    let h = '<table class="table tabla-mini table-sm table-bordered">';
     h += '<thead><tr><th>Accesorio</th><th>Estado</th><th class="text-center" style="width:90px"></th></tr></thead><tbody>';
     if (!e.accesorios.length) h += '<tr><td colspan="3" class="text-muted text-center">Sin accesorios registrados</td></tr>';
     e.accesorios.forEach(a => {
@@ -173,10 +259,12 @@ const Equipos = {
         <td class="text-center">${App.permisos.includes('equipos.editar') && +a.entregado === 0 ? '<button class="btn btn-sm btn-outline-danger btn-quitar-acc" title="Quitar"><i class="bi bi-x-lg"></i></button>' : '—'}</td>
       </tr>`;
     });
-    h += '</tbody></table></div>';
+    h += '</tbody></table>';
     if (App.permisos.includes('equipos.editar') && e.estado !== 'dado_de_baja') {
       h += `<div class="fila-dinamica mt-2">
-        <input type="text" class="form-control form-control-sm" id="nuevo-acc" maxlength="80" placeholder="Ej: Cargador, maletín, cable HDMI…">
+        <input type="text" class="form-control form-control-sm" id="nuevo-acc" maxlength="80"
+               list="dl-accesorios" placeholder="Escriba o seleccione del catalogo...">
+        <datalist id="dl-accesorios"></datalist>
         <button class="btn btn-sm btn-primary nowrap" id="btn-agregar-acc"><i class="bi bi-plus-lg"></i> Agregar</button>
       </div>`;
     }
@@ -209,7 +297,7 @@ const Equipos = {
       <div class="row g-2 mt-2">
         <div class="col-md-4"><input type="text" class="form-control form-control-sm" id="nl-software" maxlength="80" placeholder="Software * (Ej: Office 2021)"></div>
         <div class="col-md-2"><select id="nl-tipo" class="form-select form-select-sm">
-          <option value="perpetua">Perpetua</option><option value="suscripcion">Suscripción</option><option value="oem">OEM</option></select></div>
+          <option value="perpetua">Perpetua</option><option value="suscripcion">Suscripcion</option><option value="oem">OEM</option></select></div>
         <div class="col-md-2"><input type="date" class="form-control form-control-sm" id="nl-inicio"></div>
         <div class="col-md-2"><input type="date" class="form-control form-control-sm" id="nl-vence"></div>
         <div class="col-md-2 d-flex gap-1">
@@ -222,7 +310,7 @@ const Equipos = {
   },
 
   _htmlHistorial(e) {
-    if (!e.historial.length) return '<div class="text-muted small p-2">Sin eventos aún.</div>';
+    if (!e.historial.length) return '<div class="text-muted small p-2">Sin eventos aun.</div>';
     return '<div class="timeline">' + e.historial.map(h => {
       const cls = h.evento === 'baja' ? 'tl-baja' : (h.evento === 'creado' ? 'tl-ok' : '');
       return `<div class="tl-item ${cls}">
@@ -233,11 +321,16 @@ const Equipos = {
     }).join('') + '</div>';
   },
 
-  _bindearGestionDetalle(equipoId) {
-    // ---- Accesorios ----
+  _bindearGestionDetalle(equipoId, familia) {
+    if (familia) {
+      Api.get('api/equipos/accesorios-tipos.php', { familia: familia }).then(lista => {
+        $('#dl-accesorios').html(lista.map(a => '<option value="' + esc(a.texto) + '">').join(''));
+      });
+    }
+
     $('#btn-agregar-acc').on('click', () => {
       const nombre = $.trim($('#nuevo-acc').val() || '');
-      if (!nombre) { Toast.warning('Escriba el nombre del accesorio.'); return; }
+      if (!nombre) { Toast.warning('Escriba o seleccione un accesorio.'); return; }
       Api.post('api/equipos/accesorio.php', { accion: 'agregar', equipo_id: equipoId, nombre: nombre })
         .then(() => this._refrescarDetalle(equipoId));
     });
@@ -247,7 +340,6 @@ const Equipos = {
           .then(() => Equipos._refrescarDetalle(equipoId));
       });
 
-    // ---- Licencias ----
     $('#btn-agregar-lic').on('click', () => {
       const software = $.trim($('#nl-software').val() || '');
       if (!software) { Toast.warning('Indique el nombre del software.'); return; }
@@ -267,7 +359,6 @@ const Equipos = {
   },
 
   _refrescarDetalle(id) {
-    // re-render de la ficha conservando la pestaña activa
     const activa = $('#modal-general-cuerpo .nav-tabs .nav-link.active').data('bs-target') || '#eq-tab-acc';
     this._verDetalle(id);
     setTimeout(() => {
@@ -275,12 +366,11 @@ const Equipos = {
     }, 250);
   },
 
-  // ================= FORMULARIO ALTA / EDICION =================
+  // ================= FORMULARIO ADAPTATIVO =================
   _abrirForm(fila) {
     const esNuevo = !fila;
 
     Api.get('api/catalogos/select.php', { tipo: 'tipos' }).then(tipos => {
-      // si es edición, pedimos la ficha para specs + accesorios actuales
       const promesaDet = esNuevo
         ? Promise.resolve(null)
         : Api.get('api/equipos/detalle.php', { id: fila.id });
@@ -288,8 +378,8 @@ const Equipos = {
       promesaDet.then(det => {
 
         const val = c => esNuevo ? '' : (fila[c] ?? '');
-        const specs = (det && det.especificaciones) ? JSON.parse(det.especificaciones) : {};
-        const accesorios = (det && det.accesorios) ? det.accesorios.map(a => a.nombre) : [];
+        EQUIPOS_._specs = (det && det.especificaciones) ? JSON.parse(det.especificaciones) : {};
+        EQUIPOS_._accSel = (det && det.accesorios) ? det.accesorios.map(a => a.nombre) : [];
 
         const estadoBloqueado = !esNuevo && ['asignado','en_prestamo','en_mantenimiento','en_reparacion_externa','dado_de_baja'].includes(fila.estado);
 
@@ -297,14 +387,16 @@ const Equipos = {
         <form id="form-equipo" autocomplete="off" data-id="${esNuevo ? 0 : fila.id}">
           <div class="row">
             <div class="col-md-4 mb-3" data-campo="tipo_equipo_id">
-              <label class="form-label">Tipo <span class="text-danger">*</span></label>
+              <label class="form-label">Tipo de equipo <span class="text-danger">*</span></label>
               <select class="form-select" id="fe-tipo">
-                ${tipos.map(t => `<option value="${t.id}" ${+val('tipo_equipo_id') === +t.id ? 'selected' : ''}>${esc(t.texto)}</option>`).join('')}
+                ${tipos.map(t => `<option value="${t.id}" data-familia="${esc(t.familia)}"
+                  ${+val('tipo_equipo_id') === +t.id ? 'selected' : ''}>${esc(t.texto)}</option>`).join('')}
               </select>
+              <div class="form-text">El formulario se adapta automaticamente al tipo.</div>
             </div>
             <div class="col-md-4 mb-3" data-campo="marca">
               <label class="form-label">Marca <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" id="fe-marca" value="${esc(val('marca'))}" maxlength="60" placeholder="Ej: HP, Dell, Samsung…">
+              <input type="text" class="form-control" id="fe-marca" value="${esc(val('marca'))}" maxlength="60">
             </div>
             <div class="col-md-4 mb-3" data-campo="modelo">
               <label class="form-label">Modelo</label>
@@ -312,7 +404,7 @@ const Equipos = {
             </div>
 
             <div class="col-md-3 mb-3" data-campo="nro_serie">
-              <label class="form-label">N° de serie</label>
+              <label class="form-label">N de serie</label>
               <input type="text" class="form-control" id="fe-serie" value="${esc(val('nro_serie'))}" maxlength="80">
             </div>
             <div class="col-md-3 mb-3" data-campo="activo_fijo">
@@ -320,7 +412,7 @@ const Equipos = {
               <input type="text" class="form-control" id="fe-af" value="${esc(val('activo_fijo'))}" maxlength="40">
             </div>
             <div class="col-md-3 mb-3" data-campo="imei">
-              <label class="form-label">IMEI (celulares)</label>
+              <label class="form-label">IMEI (moviles)</label>
               <input type="text" class="form-control" id="fe-imei" value="${esc(val('imei'))}" maxlength="20">
             </div>
             <div class="col-md-3 mb-3" data-campo="mac">
@@ -329,7 +421,7 @@ const Equipos = {
             </div>
 
             <div class="col-md-3 mb-3" data-campo="condicion">
-              <label class="form-label">Condición <span class="text-danger">*</span></label>
+              <label class="form-label">Condicion <span class="text-danger">*</span></label>
               <select class="form-select" id="fe-condicion">
                 ${Object.entries(CONDICIONES_EQ).map(([k, t]) =>
                   `<option value="${k}" ${val('condicion') === k || (esNuevo && k === 'nuevo') ? 'selected' : ''}>${t}</option>`).join('')}
@@ -338,20 +430,19 @@ const Equipos = {
             <div class="col-md-3 mb-3" data-campo="estado">
               <label class="form-label">Estado</label>
               ${esNuevo
-                ? '<input type="text" class="form-control" value="En stock (automático)" disabled>'
+                ? '<input type="text" class="form-control" value="En stock (automatico)" disabled>'
                 : `<select class="form-select" id="fe-estado" ${estadoBloqueado ? 'disabled' : ''}>
                      <option value="en_stock"    ${val('estado') === 'en_stock'    ? 'selected' : ''}>En stock</option>
-                     <option value="en_revision" ${val('estado') === 'en_revision' ? 'selected' : ''}>En revisión</option>
+                     <option value="en_revision" ${val('estado') === 'en_revision' ? 'selected' : ''}>En revision</option>
                      <option value="obsoleto"    ${val('estado') === 'obsoleto'    ? 'selected' : ''}>Obsoleto</option>
-                   </select>
-                   ${estadoBloqueado ? '<div class="form-text">Gestionado por asignaciones/mantenimiento.</div>' : ''}`}
+                   </select>`}
             </div>
             <div class="col-md-3 mb-3" data-campo="fecha_compra">
               <label class="form-label">Fecha de compra</label>
               <input type="date" class="form-control" id="fe-fcompra" value="${esc(val('fecha_compra'))}">
             </div>
             <div class="col-md-3 mb-3" data-campo="garantia_hasta">
-              <label class="form-label">Garantía hasta</label>
+              <label class="form-label">Garantia hasta</label>
               <input type="date" class="form-control" id="fe-garantia" value="${esc(val('garantia_hasta'))}">
             </div>
 
@@ -364,44 +455,38 @@ const Equipos = {
               <input type="number" class="form-control" id="fe-costo" min="0" step="0.01" value="${esc(val('costo'))}">
             </div>
             <div class="col-md-4 mb-3" data-campo="ubicacion">
-              <label class="form-label">Ubicación</label>
-              <input type="text" class="form-control" id="fe-ubicacion" value="${esc(val('ubicacion'))}" maxlength="100" placeholder="Ej: Almacén TI / Piso 2">
-            </div>
-
-            <div class="col-12"><hr class="my-1"><div class="form-label mb-2 mt-1"><i class="bi bi-cpu me-1"></i>Especificaciones (opcional)</div></div>
-            <div class="col-md-3 mb-3" data-campo="cpu">
-              <label class="form-label">Procesador</label>
-              <input type="text" class="form-control" id="fe-cpu" value="${esc(specs.cpu || '')}" maxlength="80" placeholder="Ej: Core i5 11va">
-            </div>
-            <div class="col-md-3 mb-3" data-campo="ram">
-              <label class="form-label">RAM</label>
-              <input type="text" class="form-control" id="fe-ram" value="${esc(specs.ram || '')}" maxlength="40" placeholder="Ej: 16 GB">
-            </div>
-            <div class="col-md-3 mb-3" data-campo="disco">
-              <label class="form-label">Disco</label>
-              <input type="text" class="form-control" id="fe-disco" value="${esc(specs.disco || '')}" maxlength="60" placeholder="Ej: SSD 512 GB">
-            </div>
-            <div class="col-md-3 mb-3" data-campo="so">
-              <label class="form-label">Sistema operativo</label>
-              <input type="text" class="form-control" id="fe-so" value="${esc(specs.so || '')}" maxlength="80" placeholder="Ej: Windows 11 Pro">
-            </div>
-
-            <div class="col-12"><hr class="my-1"><div class="form-label mb-2 mt-1"><i class="bi bi-plug me-1"></i>Accesorios que incluye</div></div>
-            <div class="col-12 mb-2" id="fe-accesorios">
-              ${accesorios.map(n => this._filaAccesorioForm(n)).join('')}
-              ${accesorios.length === 0 ? this._filaAccesorioForm('') : ''}
-            </div>
-            <div class="col-12 mb-2">
-              <button type="button" class="btn btn-sm btn-outline-primary" id="btn-mas-accesorio"><i class="bi bi-plus"></i> Otro accesorio</button>
-            </div>
-
-            <div class="col-12 mb-2" data-campo="observaciones">
-              <label class="form-label">Observaciones</label>
-              <textarea class="form-control" id="fe-obs" rows="2" maxlength="500">${esc(val('observaciones'))}</textarea>
+              <label class="form-label">Ubicacion</label>
+              <input type="text" class="form-control" id="fe-ubicacion" value="${esc(val('ubicacion'))}" maxlength="100">
             </div>
           </div>
 
-          ${esNuevo ? '<div class="alert alert-info py-2 small"><i class="bi bi-magic"></i> El código <b>EQ-2025-#####</b> se genera automáticamente y el equipo entra en <b>stock</b>. Las licencias de software se gestionan desde la ficha.</div>' : ''}
+          <div class="acc-seccion">
+            <div class="form-label mb-2">
+              <i class="bi bi-cpu me-1"></i>Especificaciones tecnicas
+              <span class="badge text-bg-primary ms-1" id="fe-fam-nombre"></span>
+            </div>
+            <div class="row" id="fe-specs"></div>
+          </div>
+
+          <div class="acc-seccion">
+            <div class="form-label mb-2">
+              <i class="bi bi-plug me-1"></i>Accesorios que incluye
+              <span class="text-muted small">(marque los aplicables — catalogo segun tipo de equipo)</span>
+            </div>
+            <div id="fe-acc-cat"></div>
+            <div class="fila-dinamica mt-1">
+              <input type="text" class="form-control form-control-sm" id="fe-acc-otro" maxlength="80" placeholder="Otro accesorio no listado">
+              <button type="button" class="btn btn-outline-primary btn-sm nowrap" id="btn-acc-otro"><i class="bi bi-plus-lg"></i></button>
+            </div>
+            <div id="fe-acc-libres"></div>
+          </div>
+
+          <div class="col-12 mb-2" data-campo="observaciones">
+            <label class="form-label">Observaciones</label>
+            <textarea class="form-control" id="fe-obs" rows="2" maxlength="500">${esc(val('observaciones'))}</textarea>
+          </div>
+
+          ${esNuevo ? '<div class="alert alert-info py-2 small"><i class="bi bi-magic"></i> El codigo <b>EQ-AAAAA-#####</b> se genera automaticamente. Al terminar podra imprimir su <b>etiqueta con codigo de barras</b> desde la ficha.</div>' : ''}
 
           <div class="d-flex justify-content-end gap-2">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -411,12 +496,21 @@ const Equipos = {
 
         Modal.abrir(esNuevo ? 'Registrar equipo en inventario' : 'Editar — ' + fila.codigo, html, 'modal-xl');
 
-        $('#btn-mas-accesorio').on('click', () => {
-          $('#fe-accesorios').append(this._filaAccesorioForm(''));
+        this._renderFamilia($('#fe-tipo option:selected').data('familia') || 'otro');
+        $('#fe-tipo').on('change', () => {
+          this._renderFamilia($('#fe-tipo option:selected').data('familia') || 'otro');
         });
-        $('#fe-accesorios').on('click', '.btn-quitar-acc-form', function () {
-          if ($('#fe-accesorios .fila-acc').length > 1) $(this).closest('.fila-acc').remove();
-        });
+
+        const agregarLibre = () => {
+          const n = $.trim($('#fe-acc-otro').val() || '');
+          if (!n) return;
+          if (EQUIPOS_._accSel.includes(n)) { Toast.warning('Ese accesorio ya esta agregado.'); return; }
+          EQUIPOS_._accSel.push(n);
+          $('#fe-acc-otro').val('');
+          this._renderAccLibres();
+        };
+        $('#btn-acc-otro').on('click', agregarLibre);
+        $('#fe-acc-otro').on('keyup', e => { if (e.key === 'Enter') { e.preventDefault(); agregarLibre(); } });
 
         $('#btn-guardar-equipo').on('click', () => this._guardar());
         $('#form-equipo').on('submit', e => { e.preventDefault(); this._guardar(); });
@@ -424,19 +518,79 @@ const Equipos = {
     });
   },
 
-  _filaAccesorioForm(nombre) {
-    return `
-    <div class="fila-dinamica fila-acc">
-      <input type="text" class="form-control form-control-sm acc-nombre" maxlength="80" value="${esc(nombre)}" placeholder="Ej: Cargador original, maletín…">
-      <button type="button" class="btn btn-outline-danger btn-sm btn-quitar-acc-form"><i class="bi bi-x-lg"></i></button>
-    </div>`;
+  _renderFamilia(familia) {
+    const fam = FAMILIAS[familia] || FAMILIAS.otro;
+    $('#fe-fam-nombre').text(fam.nombre);
+
+    let html = '';
+    fam.campos.forEach(c => {
+      const valor = EQUIPOS_._specs[c.k] || '';
+      let control;
+      if (c.tipo === 'select') {
+        control = '<select class="form-select" data-k="' + c.k + '">' +
+          '<option value="">—</option>' +
+          c.opts.map(o => '<option value="' + esc(o) + '"' + (valor === o ? ' selected' : '') + '>' + esc(o) + '</option>').join('') +
+          '</select>';
+      } else {
+        control = '<input type="text" class="form-control" data-k="' + c.k + '" value="' + esc(valor) +
+                  '" maxlength="120" placeholder="' + esc(c.ph || '') + '">';
+      }
+      html += '<div class="col-md-4 mb-3"><label class="form-label">' + esc(c.label) + '</label>' + control + '</div>';
+    });
+    if (!fam.campos.length) {
+      html = '<div class="col-12 text-muted small">Este tipo no requiere especificaciones adicionales.</div>';
+    }
+    $('#fe-specs').html(html);
+
+    Api.get('api/equipos/accesorios-tipos.php', { familia: familia }).then(lista => {
+      let accHtml = '';
+      lista.forEach(a => {
+        const marcado = EQUIPOS_._accSel.includes(a.texto);
+        accHtml += '<label class="acc-check' + (marcado ? ' marcado' : '') +
+          '" data-nombre="' + esc(a.texto) + '">' +
+          '<input type="checkbox" ' + (marcado ? 'checked' : '') + '> ' + esc(a.texto) +
+          (a.familia === 'general' ? ' <span class="text-muted small">(general)</span>' : '') +
+          '</label>';
+      });
+      $('#fe-acc-cat').html(accHtml || '<div class="text-muted small mb-2">Sin accesorios tipicos para esta familia.</div>');
+
+      $('#fe-acc-cat').off('change', 'input').on('change', 'input', function () {
+        const $lab = $(this).closest('.acc-check');
+        const nombre = $lab.data('nombre');
+        if ($(this).is(':checked')) {
+          $lab.addClass('marcado');
+          if (!EQUIPOS_._accSel.includes(nombre)) EQUIPOS_._accSel.push(nombre);
+        } else {
+          $lab.removeClass('marcado');
+          EQUIPOS_._accSel = EQUIPOS_._accSel.filter(n => n !== nombre);
+        }
+      });
+    });
+
+    this._renderAccLibres();
+  },
+
+  _renderAccLibres() {
+    const catalogo = $('#fe-acc-cat .acc-check').map((i, el) => $(el).data('nombre')).get();
+    const libres = EQUIPOS_._accSel.filter(n => !catalogo.includes(n));
+    $('#fe-acc-libres').html(libres.map(n =>
+      '<span class="acc-chip">' + esc(n) +
+      ' <button type="button" data-quitar="' + esc(n) + '">&times;</button></span>'
+    ).join(''));
+    $('#fe-acc-libres').off('click', 'button').on('click', 'button', function () {
+      const q = $(this).data('quitar');
+      EQUIPOS_._accSel = EQUIPOS_._accSel.filter(n => n !== q);
+      Equipos._renderAccLibres();
+      $('#fe-acc-cat .acc-check[data-nombre="' + q + '"]').removeClass('marcado').find('input').prop('checked', false);
+    });
   },
 
   _guardar() {
-    const accesorios = $('#fe-accesorios .acc-nombre')
-      .map((i, el) => ({ nombre: $.trim($(el).val() || '') }))
-      .get()
-      .filter(a => a.nombre !== '');
+    const specs = {};
+    $('#fe-specs [data-k]').each(function () {
+      const v = $.trim($(this).val() || '');
+      if (v !== '') specs[$(this).data('k')] = v;
+    });
 
     const datos = {
       id:              $('#form-equipo').data('id') || 0,
@@ -454,12 +608,9 @@ const Equipos = {
       proveedor_compra:$.trim($('#fe-proveedor').val() || ''),
       costo:           $('#fe-costo').val() || '',
       ubicacion:       $.trim($('#fe-ubicacion').val() || ''),
-      cpu:             $.trim($('#fe-cpu').val() || ''),
-      ram:             $.trim($('#fe-ram').val() || ''),
-      disco:           $.trim($('#fe-disco').val() || ''),
-      so:              $.trim($('#fe-so').val() || ''),
       observaciones:   $.trim($('#fe-obs').val() || ''),
-      accesorios:      JSON.stringify(accesorios)
+      especificaciones: JSON.stringify(specs),
+      accesorios:      JSON.stringify(EQUIPOS_._accSel.map(n => ({ nombre: n })))
     };
 
     Api.post('api/equipos/guardar.php', datos)
@@ -483,19 +634,18 @@ const Equipos = {
     <form id="form-baja" autocomplete="off" data-id="${fila.id}">
       <div class="alert alert-danger py-2 small">
         <i class="bi bi-exclamation-triangle"></i>
-        Se dará de baja al equipo <b>${esc(fila.codigo)}</b> (${esc(fila.tipo)} ${esc(fila.marca)}).
-        Esta acción es <b>definitiva</b>: el equipo queda como histórico y ya no puede asignarse ni editarse.
-        Si está asignado, el sistema lo bloqueará.
+        Se dara de baja al equipo <b>${esc(fila.codigo)}</b> (${esc(fila.tipo)} ${esc(fila.marca)}).
+        Accion <b>definitiva</b>: queda como historico.
       </div>
       <div class="mb-3" data-campo="motivo">
         <label class="form-label">Motivo de la baja <span class="text-danger">*</span></label>
         <select class="form-select" id="fb-motivo">
           <option value="">— Seleccione —</option>
-          <option value="obsolescencia">Obsolescencia (muy antiguo)</option>
-          <option value="danado_irreparable">Dañado irreparable</option>
+          <option value="obsolescencia">Obsolescencia</option>
+          <option value="danado_irreparable">Danado irreparable</option>
           <option value="robo">Robo</option>
-          <option value="venta">Venta / disposición</option>
-          <option value="perdida">Pérdida</option>
+          <option value="venta">Venta / disposicion</option>
+          <option value="perdida">Perdida</option>
           <option value="otros">Otros</option>
         </select>
       </div>
@@ -506,7 +656,7 @@ const Equipos = {
         </div>
         <div class="col-md-6 mb-3" data-campo="destino">
           <label class="form-label">Destino</label>
-          <input type="text" class="form-control" id="fb-destino" maxlength="100" placeholder="Ej: Almacén de scrap / Venta a proveedor">
+          <input type="text" class="form-control" id="fb-destino" maxlength="100">
         </div>
       </div>
       <div class="mb-3" data-campo="observaciones">
@@ -523,10 +673,10 @@ const Equipos = {
 
     $('#btn-confirmar-baja').on('click', () => {
       const datos = {
-        id:            fila.id,
-        motivo:        $('#fb-motivo').val() || '',
-        fecha:         $('#fb-fecha').val() || '',
-        destino:       $.trim($('#fb-destino').val() || ''),
+        id: fila.id,
+        motivo: $('#fb-motivo').val() || '',
+        fecha: $('#fb-fecha').val() || '',
+        destino: $.trim($('#fb-destino').val() || ''),
         observaciones: $.trim($('#fb-obs').val() || '')
       };
       Api.post('api/equipos/baja.php', datos)

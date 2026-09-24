@@ -1,8 +1,6 @@
 <?php
 // ============================================================
 // SIGTI - Equipos para <select> de otros modulos
-// ?modo=disponibles  -> en_stock (para asignar)
-// ?modo=activos      -> no dados de baja (para tickets/mantenimiento)
 // ============================================================
 require_once __DIR__ . '/../../core/bootstrap.php';
 

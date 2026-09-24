@@ -1,6 +1,8 @@
 <?php
 // ============================================================
 // SIGTI - Autenticacion, sesion, roles y permisos
+// v2: los permisos efectivos = ROL + overrides por usuario
+//     (tabla usuario_permisos: conceder / revocar puntualmente)
 // ============================================================
 
 class Auth
@@ -10,11 +12,8 @@ class Auth
         if (session_status() === PHP_SESSION_ACTIVE) return;
         session_name('SIGTISESSID');
         session_set_cookie_params([
-            'lifetime' => 0,
-            'path'     => '/',
-            'httponly' => true,
-            'samesite' => 'Lax',
-            'secure'   => isset($_SERVER['HTTPS']),
+            'lifetime' => 0, 'path' => '/', 'httponly' => true,
+            'samesite' => 'Lax', 'secure' => isset($_SERVER['HTTPS']),
         ]);
         session_start();
     }
@@ -41,41 +40,28 @@ class Auth
             Auditoria::registrar('login_fallido', 'usuarios', null, null, "usuario='$usuario' (no existe)");
             return ['success' => false, 'message' => $generico];
         }
-
         if ($u['password_hash'] === 'PENDIENTE_ACTIVAR') {
-            return ['success' => false,
-                    'message' => 'La cuenta admin aun no esta activada. Ejecute crear_admin.php primero.'];
+            return ['success' => false, 'message' => 'La cuenta admin aun no esta activada. Ejecute crear_admin.php primero.'];
         }
-
         if ($u['estado'] === 'bloqueado') {
             Auditoria::registrar('login_fallido', 'usuarios', (int)$u['id'], null, 'cuenta bloqueada');
             return ['success' => false, 'message' => 'La cuenta esta bloqueada. Contacte al administrador.'];
         }
-
         if ($u['estado'] === 'inactivo') {
             return ['success' => false, 'message' => 'La cuenta esta inactiva.'];
         }
 
         if (!password_verify($password, $u['password_hash'])) {
-
             $intentos = (int)$u['intentos_fallidos'] + 1;
-
             if ($intentos >= MAX_INTENTOS_LOGIN) {
-                Database::update('usuarios',
-                    ['estado' => 'bloqueado', 'intentos_fallidos' => $intentos],
-                    'id = ?', [$u['id']]);
-                Auditoria::registrar('login_fallido', 'usuarios', (int)$u['id'], null,
-                    "cuenta BLOQUEADA al intento $intentos");
-                return ['success' => false,
-                        'message' => 'Contrasena incorrecta. La cuenta fue BLOQUEADA (' . MAX_INTENTOS_LOGIN . ' intentos).'];
+                Database::update('usuarios', ['estado' => 'bloqueado', 'intentos_fallidos' => $intentos], 'id = ?', [$u['id']]);
+                Auditoria::registrar('login_fallido', 'usuarios', (int)$u['id'], null, "cuenta BLOQUEADA al intento $intentos");
+                return ['success' => false, 'message' => 'Contrasena incorrecta. La cuenta fue BLOQUEADA (' . MAX_INTENTOS_LOGIN . ' intentos).'];
             }
-
             Database::update('usuarios', ['intentos_fallidos' => $intentos], 'id = ?', [$u['id']]);
             Auditoria::registrar('login_fallido', 'usuarios', (int)$u['id'], null, "intento $intentos");
-
             $restan = MAX_INTENTOS_LOGIN - $intentos;
-            return ['success' => false,
-                    'message' => "Usuario o contrasena incorrectos. Quedan $restan intento(s)."];
+            return ['success' => false, 'message' => "Usuario o contrasena incorrectos. Quedan $restan intento(s)."];
         }
 
         session_regenerate_id(true);
@@ -85,14 +71,12 @@ class Auth
             'usuario'  => $u['usuario'],
             'nombre'   => $u['nombre_completo'],
             'rol'      => $u['rol'],
-            'permisos' => self::cargarPermisos((int)$u['rol_id']),
+            'permisos' => self::cargarPermisos((int)$u['rol_id'], (int)$u['id']),
         ];
         $_SESSION['ultima_actividad'] = time();
 
         Database::update('usuarios',
-            ['intentos_fallidos' => 0, 'ultimo_acceso' => date('Y-m-d H:i:s')],
-            'id = ?', [$u['id']]);
-
+            ['intentos_fallidos' => 0, 'ultimo_acceso' => date('Y-m-d H:i:s')], 'id = ?', [$u['id']]);
         Auditoria::registrar('login', 'usuarios', (int)$u['id']);
 
         return ['success' => true, 'message' => 'Bienvenido, ' . $u['nombre_completo']];
@@ -105,9 +89,7 @@ class Auth
 
     public static function check(): void
     {
-        if (!self::isLogged()) {
-            Response::noAuth('Sesion no iniciada.');
-        }
+        if (!self::isLogged()) Response::noAuth('Sesion no iniciada.');
         $limite = SESSION_TIMEOUT_MIN * 60;
         if (isset($_SESSION['ultima_actividad']) && (time() - $_SESSION['ultima_actividad']) > $limite) {
             self::logout();
@@ -116,20 +98,9 @@ class Auth
         $_SESSION['ultima_actividad'] = time();
     }
 
-    public static function userId(): ?int
-    {
-        return $_SESSION['usuario']['id'] ?? null;
-    }
-
-    public static function nombre(): string
-    {
-        return $_SESSION['usuario']['nombre'] ?? '';
-    }
-
-    public static function rol(): ?string
-    {
-        return $_SESSION['usuario']['rol'] ?? null;
-    }
+    public static function userId(): ?int  { return $_SESSION['usuario']['id'] ?? null; }
+    public static function nombre(): string { return $_SESSION['usuario']['nombre'] ?? ''; }
+    public static function rol(): ?string   { return $_SESSION['usuario']['rol'] ?? null; }
 
     public static function info(): array
     {
@@ -164,7 +135,12 @@ class Auth
         }
     }
 
-    private static function cargarPermisos(int $rolId): array
+    /**
+     * Permisos EFECTIVOS: los del ROL + overrides del usuario
+     * (usuario_permisos: concedido=1 agrega, concedido=0 quita).
+     * El try/catch evita romper el login si la tabla aun no existe.
+     */
+    private static function cargarPermisos(int $rolId, int $usuarioId): array
     {
         $filas = Database::get(
             "SELECT CONCAT(p.modulo, '.', p.accion) AS permiso
@@ -173,7 +149,28 @@ class Auth
              WHERE rp.rol_id = ?",
             [$rolId]
         );
-        return array_column($filas, 'permiso');
+        $permisos = array_column($filas, 'permiso');
+
+        try {
+            $overrides = Database::get(
+                "SELECT CONCAT(p.modulo, '.', p.accion) AS permiso, up.concedido
+                 FROM usuario_permisos up
+                 INNER JOIN permisos p ON p.id = up.permiso_id
+                 WHERE up.usuario_id = ?",
+                [$usuarioId]
+            );
+            foreach ($overrides as $o) {
+                if ((int)$o['concedido'] === 1) {
+                    if (!in_array($o['permiso'], $permisos, true)) $permisos[] = $o['permiso'];
+                } else {
+                    $permisos = array_values(array_diff($permisos, [$o['permiso']]));
+                }
+            }
+        } catch (Throwable $e) {
+            // tabla usuario_permisos ausente -> usar solo permisos del rol
+        }
+
+        return $permisos;
     }
 
     public static function logout(): void

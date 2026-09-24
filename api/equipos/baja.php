@@ -21,11 +21,10 @@ if ($v->fails()) Response::validation($v->errors());
  $e = Database::getOne('SELECT * FROM equipos WHERE id = ?', [$id]);
 if (!$e) Response::error('El equipo no existe.');
 
-if ($e['estado'] === 'dado_de_baja') Response::error('El equipo ya está dado de baja.');
+if ($e['estado'] === 'dado_de_baja') Response::error('El equipo ya esta dado de baja.');
 
-// Regla critica: no dar de baja un equipo asignado/prestado
 if (in_array($e['estado'], ['asignado','en_prestamo'], true)) {
-    Response::error('El equipo está ASIGNADO o en PRÉSTAMO. Registre primero la devolución (Paso 9) y luego la baja.');
+    Response::error('El equipo esta ASIGNADO o en PRESTAMO. Registre primero la devolucion (Paso 9) y luego la baja.');
 }
 
 Database::begin();
@@ -52,7 +51,7 @@ try {
     Database::commit();
     Auditoria::registrar('cambiar_estado', 'equipos', $id, ['estado' => $e['estado']], ['estado' => 'dado_de_baja']);
 
-    Response::ok(null, "Equipo {$e['codigo']} dado de baja. El registro queda como histórico (auditoría/contable).");
+    Response::ok(null, "Equipo {$e['codigo']} dado de baja. El registro queda como historico (auditoria/contable).");
 
 } catch (Throwable $ex) {
     Database::rollback();

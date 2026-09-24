@@ -12,6 +12,7 @@ const Router = {
     'mantenimiento/lista':   'Mantenimiento de Equipos',
     'equipos/lista':         'Inventario de Equipos',
     'asignaciones/lista':    'Asignaciones y Actas',
+    'actas/lista':          'Actas de Entrega y Devolución',
     'personal/lista':        'Personal — Altas y Ceses',
     'reportes/principal':    'Reportes',
     'usuarios/lista':        'Usuarios del Sistema',
@@ -20,10 +21,10 @@ const Router = {
   },
 
   // vistas que aún no existen → panel "en construcción" con su paso
-   EN_CONSTRUCCION: {
-    'equipos/lista': 6,
-    'tickets/lista': 7, 'mantenimiento/lista': 8,
-    'asignaciones/lista': 9, 'reportes/principal': 11, 'auditoria/lista': 12
+  // (Equipos y Personal ya fueron removidos: sus módulos están hechos)
+  EN_CONSTRUCCION: {
+    'reportes/principal': 11,
+    'auditoria/lista': 12
   },
 
   ir(ruta, params = {}) {
@@ -74,9 +75,8 @@ const Router = {
     $('#titulo-vista').text(this.TITULOS[ruta] || ruta);
     Menu.activo(ruta);
     if (('#' + ruta) !== location.hash) {
-      history.replaceState(null, '', '#' + ruta);   // URL sincronizada sin recargar
+      history.replaceState(null, '', '#' + ruta);
     }
-    // reinicializa el JS del módulo si se registró (patrón de pasos siguientes)
     const mod = App.modulos[modulo];
     if (mod && typeof mod.init === 'function') mod.init(params);
   }

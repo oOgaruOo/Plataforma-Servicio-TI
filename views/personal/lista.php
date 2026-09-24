@@ -1,8 +1,9 @@
 <?php
 require_once __DIR__ . '/../../core/guard_vista.php';
 
- $puedeVer    = Auth::can('personal', 'ver');
- $puedeCrear  = Auth::can('personal', 'crear');
+ $puedeVer   = Auth::can('personal', 'ver');
+ $puedeCrear = Auth::can('personal', 'crear');
+ $puedeCese  = Auth::can('personal', 'cese');
 if (!$puedeVer):
 ?>
   <div class="alert alert-warning mb-0">
@@ -13,15 +14,20 @@ if (!$puedeVer):
 <div class="card shadow-sm">
   <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
     <span><i class="bi bi-people me-1"></i>Personal — registro de ingresos y ceses</span>
-    <?php if ($puedeCrear): ?>
-      <button id="btn-nuevo-personal" class="btn btn-primary btn-sm">
-        <i class="bi bi-person-plus"></i> Registrar ingreso (alta)
+    <div class="d-flex gap-2">
+      <button id="btn-ver-pendientes" class="btn btn-outline-danger btn-sm"
+              title="Ceses próximos y cesados con equipos pendientes">
+        <i class="bi bi-exclamation-octagon"></i> Ceses / Pendientes
       </button>
-    <?php endif; ?>
+      <?php if ($puedeCrear): ?>
+        <button id="btn-nuevo-personal" class="btn btn-primary btn-sm">
+          <i class="bi bi-person-plus"></i> Registrar ingreso (alta)
+        </button>
+      <?php endif; ?>
+    </div>
   </div>
   <div class="card-body">
 
-    <!-- ===== Barra de filtros (aplican en vivo al servidor) ===== -->
     <div class="row g-2 mb-3">
       <div class="col-6 col-md-2">
         <select id="pf-estado" class="form-select form-select-sm">
@@ -56,12 +62,8 @@ if (!$puedeVer):
         </div>
       </div>
       <div class="col-12 col-md-2 d-flex gap-1">
-        <button id="btn-filtrar-personal" class="btn btn-primary btn-sm flex-fill">
-          <i class="bi bi-funnel"></i> Filtrar
-        </button>
-        <button id="btn-limpiar-personal" class="btn btn-outline-secondary btn-sm" title="Limpiar filtros">
-          <i class="bi bi-x-lg"></i>
-        </button>
+        <button id="btn-filtrar-personal" class="btn btn-primary btn-sm flex-fill"><i class="bi bi-funnel"></i> Filtrar</button>
+        <button id="btn-limpiar-personal" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x-lg"></i></button>
       </div>
     </div>
 
@@ -76,9 +78,9 @@ if (!$puedeVer):
 
     <div class="text-muted small mt-2">
       <i class="bi bi-info-circle"></i>
-      Estados del ciclo: <b>Pre-ingreso</b> → <b>Activo</b> → <b>Cese programado</b> →
-      <b>En proceso de cese</b> → <b>Cesado</b> (histórico).
-      El botón <i class="bi bi-list-check"></i> abre el checklist de onboarding en vivo.
+      <b>📅</b> Registrar cese (programa fecha + checklist de salida) ·
+      <b>📥</b> Procesar cese (devolución masiva + bloqueo de cuentas + acta LUMAT-TI-FOR-001) ·
+      <b>🚨</b> Ceses/Pendientes (reporte crítico).
     </div>
   </div>
 </div>

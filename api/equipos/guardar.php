@@ -1,7 +1,8 @@
 <?php
 // ============================================================
-// SIGTI - Equipos: alta (codigo EQ autogenerado) + edicion
-// Accesorios llegan como JSON: [{nombre:"Cargador"},...]
+// SIGTI - Equipos: alta (codigo EQ) + edicion
+// especificaciones llega como JSON con los campos de la FAMILIA
+// accesorios llega como JSON: [{"nombre":"Cargador"},...]
 // ============================================================
 require_once __DIR__ . '/../../core/bootstrap.php';
 
@@ -13,59 +14,59 @@ Auth::requirePermission('equipos', 'crear');
  $esNuevo = ($id === 0);
 
  $v = Validator::make($_POST, [
-    'tipo_equipo_id' => 'required|integer',
-    'marca'          => 'required|maxlen:60',
-    'modelo'         => 'maxlen:80',
-    'nro_serie'      => 'maxlen:80',
-    'activo_fijo'    => 'maxlen:40',
-    'imei'           => 'maxlen:20',
-    'mac'            => 'maxlen:20',
-    'condicion'      => 'required|in:nuevo,bueno,regular,danado,irreparable',
-    'fecha_compra'   => 'date',
+    'tipo_equipo_id'  => 'required|integer',
+    'marca'           => 'required|maxlen:60',
+    'modelo'          => 'maxlen:80',
+    'nro_serie'       => 'maxlen:80',
+    'activo_fijo'     => 'maxlen:40',
+    'imei'            => 'maxlen:20',
+    'mac'             => 'maxlen:20',
+    'condicion'       => 'required|in:nuevo,bueno,regular,danado,irreparable',
+    'fecha_compra'    => 'date',
     'proveedor_compra'=> 'maxlen:100',
-    'costo'          => 'numeric|max:99999999',
-    'garantia_hasta' => 'date',
-    'ubicacion'      => 'maxlen:100',
-    'observaciones'  => 'maxlen:500',
-    'cpu'            => 'maxlen:80',
-    'ram'            => 'maxlen:40',
-    'disco'          => 'maxlen:60',
-    'so'             => 'maxlen:80',
-    'estado'         => 'in:en_stock,en_revision,obsoleto',
+    'costo'           => 'numeric|max:99999999',
+    'garantia_hasta'  => 'date',
+    'ubicacion'       => 'maxlen:100',
+    'observaciones'   => 'maxlen:500',
+    'estado'          => 'in:en_stock,en_revision,obsoleto',
 ], [
     'tipo_equipo_id' => 'Tipo de equipo', 'marca' => 'Marca', 'modelo' => 'Modelo',
-    'nro_serie' => 'N° de serie', 'activo_fijo' => 'Código de activo fijo',
-    'condicion' => 'Condición', 'costo' => 'Costo',
-    'garantia_hasta' => 'Garantía hasta', 'proveedor_compra' => 'Proveedor de compra',
+    'nro_serie' => 'N de serie', 'activo_fijo' => 'Codigo de activo fijo',
+    'condicion' => 'Condicion', 'costo' => 'Costo',
+    'garantia_hasta' => 'Garantia hasta', 'proveedor_compra' => 'Proveedor de compra',
     'imei' => 'IMEI', 'mac' => 'MAC',
 ]);
 if ($v->fails()) Response::validation($v->errors());
 
-// ---- Tipo válido ----
-if (!Database::getValue('SELECT id FROM tipo_equipos WHERE id = ?', [(int)$_POST['tipo_equipo_id']])) {
-    Response::validation(['tipo_equipo_id' => 'El tipo de equipo no existe.']);
-}
+// ---- Tipo valido + familia ----
+ $tipoEq = Database::getOne(
+    'SELECT id, familia FROM tipo_equipos WHERE id = ?', [(int)$_POST['tipo_equipo_id']]);
+if (!$tipoEq) Response::validation(['tipo_equipo_id' => 'El tipo de equipo no existe.']);
 
  $nulo = fn($k) => (trim((string)($_POST[$k] ?? '')) === '') ? null : trim((string)$_POST[$k]);
 
-// ---- Unicidad de serie e IMEI (solo si informados) ----
  $serie = $nulo('nro_serie');
 if ($serie && Database::getValue('SELECT id FROM equipos WHERE nro_serie = ? AND id <> ?', [$serie, $id])) {
-    Response::validation(['nro_serie' => "La serie «{$serie}» ya está registrada en otro equipo."]);
+    Response::validation(['nro_serie' => "La serie «{$serie}» ya esta registrada en otro equipo."]);
 }
  $imei = $nulo('imei');
 if ($imei && Database::getValue('SELECT id FROM equipos WHERE imei = ? AND id <> ?', [$imei, $id])) {
-    Response::validation(['imei' => "El IMEI «{$imei}» ya está registrado en otro equipo."]);
+    Response::validation(['imei' => "El IMEI «{$imei}» ya esta registrado en otro equipo."]);
 }
 
-// ---- Especificaciones como JSON ----
- $specs = array_filter([
-    'cpu'   => $nulo('cpu'),
-    'ram'   => $nulo('ram'),
-    'disco' => $nulo('disco'),
-    'so'    => $nulo('so'),
-]);
- $especificaciones = $specs ? json_encode($specs, JSON_UNESCAPED_UNICODE) : null;
+// ---- Especificaciones dinamicas (JSON de la familia) ----
+ $espJson = trim((string)($_POST['especificaciones'] ?? '{}'));
+ $esp = json_decode($espJson, true);
+if (!is_array($esp)) $esp = [];
+ $limpio = [];
+foreach ($esp as $k => $val) {
+    $k = preg_replace('/[^a-zA-Z0-9_]/', '', substr((string)$k, 0, 40));
+    if ($k === '') continue;
+    $val = trim((string)$val);
+    if ($val === '' || mb_strlen($val) > 120) continue;
+    $limpio[$k] = $val;
+}
+ $especificaciones = $limpio ? json_encode($limpio, JSON_UNESCAPED_UNICODE) : null;
 
  $datos = [
     'tipo_equipo_id'  => (int)$_POST['tipo_equipo_id'],
@@ -85,7 +86,7 @@ if ($imei && Database::getValue('SELECT id FROM equipos WHERE imei = ? AND id <>
     'observaciones'   => $nulo('observaciones'),
 ];
 
-// ---- Accesorios (JSON de nombres) ----
+// ---- Accesorios (JSON de nombres: del catalogo o libres) ----
  $accesorios = [];
  $jsonAcc = trim((string)($_POST['accesorios'] ?? '[]'));
 if ($jsonAcc !== '') {
@@ -93,16 +94,17 @@ if ($jsonAcc !== '') {
     if (is_array($dec)) {
         foreach ($dec as $a) {
             $nombre = trim((string)($a['nombre'] ?? ''));
-            if ($nombre !== '') $accesorios[] = mb_substr($nombre, 0, 80);
+            if ($nombre !== '' && !in_array($nombre, $accesorios, true)) {
+                $accesorios[] = mb_substr($nombre, 0, 80);
+            }
         }
     }
 }
 
 Database::begin();
 try {
-    // ==================== CREAR ====================
     if ($esNuevo) {
-        $datos['estado'] = 'en_stock';          // todo equipo nuevo entra al stock
+        $datos['estado'] = 'en_stock';
         $codigo = Correlativo::generar('equipo');
         $datos['codigo'] = $codigo;
 
@@ -120,23 +122,34 @@ try {
         ]);
 
         Database::commit();
+        // --- BITACORA DE UBICACION (seguimiento de computo) ---
+        $esComputo = Database::getValue(
+            "SELECT COUNT(*) FROM tipo_equipos WHERE id = ? AND familia = 'computo'",
+            [(int)$_POST['tipo_equipo_id']]);
+        if ($esComputo) {
+            Database::insert('equipo_ubicaciones', [
+                'equipo_id'  => $nuevoId,
+                'ubicacion'  => 'Almacen TI',
+                'tipo'       => 'alta',
+                'observaciones' => 'Alta en inventario',
+            ]);
+            Database::update('equipos',
+                ['ubicacion' => 'Almacen TI'], 'id = ?', [$nuevoId]);
+        }
         Auditoria::registrar('crear', 'equipos', $nuevoId, null, $datos);
 
         Response::ok(['id' => $nuevoId, 'codigo' => $codigo, 'abrir_detalle' => true],
             "Equipo $codigo registrado y disponible en stock.");
     }
 
-    // ==================== EDITAR ====================
     $antes = Database::getOne('SELECT * FROM equipos WHERE id = ?', [$id]);
     if (!$antes) { Database::rollback(); Response::error('El equipo no existe.'); }
 
     if ($antes['estado'] === 'dado_de_baja') {
         Database::rollback();
-        Response::error('Un equipo dado de baja es histórico: no puede editarse.');
+        Response::error('Un equipo dado de baja es historico: no puede editarse.');
     }
 
-    // Regla: si está asignado/prestado, el estado NO se toca aquí
-    // (cambia solo con la devolución del Paso 9)
     $estadoBloqueado = in_array($antes['estado'], ['asignado','en_prestamo','en_mantenimiento',
                                                    'en_reparacion_externa'], true);
     $nuevoEstado = $_POST['estado'] ?? '';
@@ -147,7 +160,6 @@ try {
 
     Database::update('equipos', $datos, 'id = ?', [$id]);
 
-    // ---- Accesorios: sincronizar (agregar nuevos, quitar faltantes no entregados) ----
     $actuales = Database::get('SELECT id, nombre, entregado FROM equipo_accesorios WHERE equipo_id = ?', [$id]);
     $nombresActuales = array_map(fn($a) => $a['nombre'], $actuales);
 
@@ -170,7 +182,6 @@ try {
         }
     }
 
-    // ---- Historial de la edición ----
     $cambios = [];
     foreach ($datos as $k => $nuevoVal) {
         $antiguo = $antes[$k] ?? null;
@@ -192,7 +203,7 @@ try {
 
     $msg = 'Equipo actualizado correctamente.';
     if ($estadoBloqueado && $nuevoEstado && $nuevoEstado !== $antes['estado']) {
-        $msg .= ' El estado no cambió: estando «' . $antes['estado'] . '» se modifica solo por devolución/mantenimiento.';
+        $msg .= ' El estado no cambio: se modifica solo por devolucion/mantenimiento.';
     }
     Response::ok(['id' => $id], $msg);
 

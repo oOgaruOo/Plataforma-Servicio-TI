@@ -2,6 +2,9 @@
 // ============================================================
 // SIGTI - Generacion de codigos correlativos unicos
 // TK-2025-00001, MT-..., SQ-..., AC-..., EQ-...
+// VERSION 2: compatible con transacciones externas.
+// Si el llamador (ej: guardar.php) ya abrio una transaccion,
+// la REUTILIZA en lugar de abrir otra (PDO no anida).
 // ============================================================
 
 class Correlativo
@@ -22,9 +25,17 @@ class Correlativo
 
         $anio = (int) date('Y');
         $pdo  = Database::conn();
-        $pdo->beginTransaction();
+
+        // ¿el llamador ya tiene una transaccion abierta?
+        $propia = !$pdo->inTransaction();
+        if ($propia) {
+            $pdo->beginTransaction();
+        }
 
         try {
+            // Bloquea la fila del anio para otros procesos.
+            // Con transaccion externa, el bloqueo se mantiene hasta que
+            // ESA transaccion haga commit -> nunca genera duplicados.
             $stmt = $pdo->prepare(
                 "SELECT ultimo_numero FROM correlativos
                  WHERE tipo_doc = ? AND anio = ? FOR UPDATE"
@@ -42,11 +53,18 @@ class Correlativo
                     ->execute([$tipo, $anio, $nuevo]);
             }
 
-            $pdo->commit();
+            if ($propia) {
+                $pdo->commit();
+            }
+
             return sprintf('%s-%d-%05d', self::PREFIJOS[$tipo], $anio, $nuevo);
 
         } catch (Throwable $e) {
-            Database::rollback();
+            // Solo deshacemos si la transaccion es NUESTRA;
+            // si es del llamador, el la manejara en su propio catch.
+            if ($propia && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             throw $e;
         }
     }

@@ -1,6 +1,10 @@
 <?php
 require_once __DIR__ . '/core/bootstrap.php';
  $csrfToken = Csrf::token();   // el token viaja embebido al JS (misma sesión)
+
+// Cache-busting: usa la fecha de última modificación de cada archivo,
+// así el navegador SIEMPRE pide la versión fresca tras cualquier cambio.
+ $v = fn($ruta) => filemtime(ROOT_PATH . $ruta);
 ?>
 <!doctype html>
 <html lang="es">
@@ -11,14 +15,17 @@ require_once __DIR__ . '/core/bootstrap.php';
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <link href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-<link href="<?= BASE_URL ?>assets/css/sigti.css" rel="stylesheet">
+<link href="<?= BASE_URL ?>assets/css/sigti.css?v=<?= $v('/assets/css/sigti.css') ?>" rel="stylesheet">
 </head>
 <body>
 
 <!-- ============ PANTALLA DE LOGIN ============ -->
 <div id="pantalla-login" class="pantalla-login hidden">
   <div class="login-card">
-    <div class="login-logo">🖥️</div>
+    <div class="login-foto hidden" id="login-foto">
+          <img id="login-foto-img" alt="">
+        </div>
+        <div class="login-logo" id="login-logo-icona">🖥️</div>
     <h1>SIGTI</h1>
     <p class="login-sub">Sistema Integral de Gestión TI — Área de Sistemas</p>
 
@@ -104,22 +111,65 @@ require_once __DIR__ . '/core/bootstrap.php';
   const BASE_URL   = '<?= BASE_URL ?>';
   const CSRF_TOKEN = '<?= $csrfToken ?>';
 </script>
+
+<!-- Librerías CDN -->
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
-<script src="<?= BASE_URL ?>assets/js/core/app.js"></script>
-<script src="<?= BASE_URL ?>assets/js/core/toast.js"></script>
-<script src="<?= BASE_URL ?>assets/js/core/loader.js"></script>
-<script src="<?= BASE_URL ?>assets/js/core/ajax.js"></script>
-<script src="<?= BASE_URL ?>assets/js/core/menu.js"></script>
-<script src="<?= BASE_URL ?>assets/js/core/router.js"></script>
-<script src="<?= BASE_URL ?>assets/js/core/notificaciones.js"></script>
-<script src="<?= BASE_URL ?>assets/js/core/datatables.js"></script>
-<script src="<?= BASE_URL ?>assets/js/app/catalogos.js"></script>
-<script src="<?= BASE_URL ?>assets/js/app/usuarios.js"></script>
-<script src="<?= BASE_URL ?>assets/js/app/personal.js"></script>
-<script src="<?= BASE_URL ?>assets/js/app/equipos.js"></script>
+
+<!-- Núcleo del sistema (con cache-busting automático) -->
+<script src="<?= BASE_URL ?>assets/js/core/app.js?v=<?= $v('/assets/js/core/app.js') ?>"></script>
+<script src="<?= BASE_URL ?>assets/js/core/toast.js?v=<?= $v('/assets/js/core/toast.js') ?>"></script>
+<script src="<?= BASE_URL ?>assets/js/core/loader.js?v=<?= $v('/assets/js/core/loader.js') ?>"></script>
+<script src="<?= BASE_URL ?>assets/js/core/ajax.js?v=<?= $v('/assets/js/core/ajax.js') ?>"></script>
+<script src="<?= BASE_URL ?>assets/js/core/menu.js?v=<?= $v('/assets/js/core/menu.js') ?>"></script>
+<script src="<?= BASE_URL ?>assets/js/core/router.js?v=<?= $v('/assets/js/core/router.js') ?>"></script>
+<script src="<?= BASE_URL ?>assets/js/core/notificaciones.js?v=<?= $v('/assets/js/core/notificaciones.js') ?>"></script>
+<script src="<?= BASE_URL ?>assets/js/core/datatables.js?v=<?= $v('/assets/js/core/datatables.js') ?>"></script>
+
+<!-- Módulos de la aplicación (con cache-busting automático) -->
+<script src="<?= BASE_URL ?>assets/js/app/catalogos.js?v=<?= $v('/assets/js/app/catalogos.js') ?>"></script>
+<script src="<?= BASE_URL ?>assets/js/app/usuarios.js?v=<?= $v('/assets/js/app/usuarios.js') ?>"></script>
+<script src="<?= BASE_URL ?>assets/js/app/personal.js?v=<?= $v('/assets/js/app/personal.js') ?>"></script>
+<script src="<?= BASE_URL ?>assets/js/app/equipos.js?v=<?= $v('/assets/js/app/equipos.js') ?>"></script>
+<script src="<?= BASE_URL ?>assets/js/app/tickets.js?v=<?= $v('/assets/js/app/tickets.js') ?>"></script>
+
+<script src="<?= BASE_URL ?>assets/js/app/mantenimiento.js?v=<?= $v('/assets/js/app/mantenimiento.js') ?>"></script>
+<script src="<?= BASE_URL ?>assets/js/app/actas.js?v=<?= $v('/assets/js/app/actas.js') ?>"></script>
+<script src="<?= BASE_URL ?>assets/js/app/actas_branding.js?v=<?= $v('/assets/js/app/actas_branding.js') ?>"></script>
+<script src="<?= BASE_URL ?>assets/js/app/asignaciones.js?v=<?= $v('/assets/js/app/asignaciones.js') ?>"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="<?= BASE_URL ?>assets/js/app/equipos_import.js?v=<?= $v('/assets/js/app/equipos_import.js') ?>"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<script>
+  // foto del ultimo usuario (login) y avatar del topbar
+  (function () {
+    var fotoGuardada = localStorage.getItem('sigti_foto');
+    var nomGuardado  = localStorage.getItem('sigti_nombre') || '';
+    var usrGuardado  = localStorage.getItem('sigti_usuario') || '';
+    if (fotoGuardada) {
+      var img = document.getElementById('login-foto-img');
+      var box = document.getElementById('login-foto');
+      if (img && box) { img.src = fotoGuardada; box.classList.remove('hidden'); }
+      var ic = document.getElementById('login-logo-icona');
+      if (ic) ic.style.display = 'none';
+    }
+    if (usrGuardado) {
+      var inp = document.getElementById('login-usuario');
+      if (inp) inp.value = usrGuardado;
+    }
+  })();
+  function guardarFotoLogin(fotoB64, nombre, usuario) {
+    try {
+      if (fotoB64) localStorage.setItem('sigti_foto', fotoB64);
+      else localStorage.removeItem('sigti_foto');
+      localStorage.setItem('sigti_nombre', nombre || '');
+      localStorage.setItem('sigti_usuario', usuario || '');
+    } catch (e) {}
+  }
+</script>
+<script src="<?= BASE_URL ?>assets/js/app/seguimiento.js?v=<?= $v('/assets/js/app/seguimiento.js') ?>"></script>
 </body>
 </html>

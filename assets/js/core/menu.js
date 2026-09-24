@@ -9,7 +9,9 @@ const MENU = [
 
   { seccion: 'Inventario' },
   { ruta: 'equipos/lista',         icono: 'pc-display',     texto: 'Equipos',                    permiso: ['equipos.ver'] },
+  { ruta: 'equipos/seguimiento', icono: 'geo-alt',          texto: 'Seguimiento Ubicación',     permiso: ['equipos.ver'] },
   { ruta: 'asignaciones/lista',    icono: 'box-seam',       texto: 'Asignaciones y Actas',       permiso: ['asignaciones.ver'] },
+  { ruta: 'actas/lista',          icono: 'file-earmark-text', texto: 'Actas de Entrega',           permiso: ['actas.generar'] },
 
   { seccion: 'Personal' },
   { ruta: 'personal/lista',        icono: 'people',         texto: 'Personal (Altas / Ceses)',   permiso: ['personal.ver'] },
