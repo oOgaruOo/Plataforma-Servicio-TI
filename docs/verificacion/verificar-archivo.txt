@@ -1,2 +1,0 @@
-Get-ChildItem 'C:\xampp\htdocs\Plataforma-Servicio-TI' -File | Select-Object Name
-Test-Path 'C:\xampp\htdocs\Plataforma-Servicio-TI\crear_admin.php'
