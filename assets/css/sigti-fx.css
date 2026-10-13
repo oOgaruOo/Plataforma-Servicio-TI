@@ -1,0 +1,201 @@
+/* @autor Ing. Alejandro Aldo Meneses Aliaga · ORCID 0000-0003-1788-1978 · Código de autor: SIGTI-DEV-AMA-2026 · © 2026 */
+/* ============================================================
+   SIGTI - Capa de movimiento (se carga despues de sigti.css)
+   Lenguaje: movimientos cortos (180-500 ms) con salida suave, un solo
+   "momento" por pantalla (las tarjetas suben en cascada) y respuesta
+   inmediata a lo que hace la persona (botones, modales, avisos).
+   Lo urgente (rojo) es lo unico que se mueve por si solo.
+   Se apaga con "Animaciones" en el menu de la foto o si el sistema
+   del usuario pide menos movimiento (prefers-reduced-motion).
+   ============================================================ */
+:root{
+  --fx-ease:cubic-bezier(.22,1,.36,1);
+  --fx-spring:cubic-bezier(.34,1.45,.64,1);
+}
+
+/* ---------- Apagado ---------- */
+html.fx-off *,html.fx-off *::before,html.fx-off *::after{
+  animation:none!important;transition:none!important;scroll-behavior:auto!important}
+@media (prefers-reduced-motion:reduce){
+  html:not(.fx-on) *,html:not(.fx-on) *::before,html:not(.fx-on) *::after{
+    animation:none!important;transition:none!important}
+}
+
+/* ---------- Cuadros de animacion ---------- */
+@keyframes fx-rise{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes fx-fade{from{opacity:0}to{opacity:1}}
+@keyframes fx-row{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
+@keyframes fx-menu{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:none}}
+@keyframes fx-pop{from{opacity:0;transform:translateY(10px) scale(.92)}to{opacity:1;transform:none}}
+@keyframes fx-drop{from{opacity:0;transform:translateY(-8px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes fx-title{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+@keyframes fx-shake{10%,90%{transform:translateX(-1px)}20%,80%{transform:translateX(2px)}30%,50%,70%{transform:translateX(-4px)}40%,60%{transform:translateX(4px)}}
+@keyframes fx-bar{from{background-position:-100% 0}to{background-position:200% 0}}
+@keyframes fx-late{from{opacity:0}to{opacity:1}}
+@keyframes fx-ping{0%{box-shadow:0 0 0 0 rgba(220,38,38,.38)}70%,100%{box-shadow:0 0 0 10px rgba(220,38,38,0)}}
+@keyframes fx-ring{0%,100%{transform:rotate(0)}10%{transform:rotate(16deg)}20%{transform:rotate(-14deg)}30%{transform:rotate(10deg)}40%{transform:rotate(-8deg)}50%{transform:rotate(4deg)}60%{transform:rotate(0)}}
+@keyframes fx-grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes fx-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes fx-drift{0%{background-position:0% 50%}100%{background-position:100% 50%}}
+@keyframes fx-ripple{from{transform:scale(0);opacity:.45}to{transform:scale(1);opacity:0}}
+@keyframes fx-timer{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@keyframes fx-glow{0%{box-shadow:inset 0 0 0 rgba(37,99,235,0)}40%{box-shadow:inset 18px 0 24px -14px rgba(96,165,250,.55)}100%{box-shadow:inset 0 0 0 rgba(37,99,235,0)}}
+
+/* ---------- Entrada de cada pantalla (lo organiza assets/js/core/fx.js) ---------- */
+.fx-rise{animation:fx-rise .55s var(--fx-ease) backwards;animation-delay:calc(var(--fx-i,0) * 55ms)}
+#titulo-vista.fx-title{animation:fx-title .35s var(--fx-ease)}
+.tab-pane.active.show,.tab-pane.active:not(.fade){animation:fx-fade .3s ease}
+
+/* ---------- Carga: barra superior en vez de un circulo sobre la pantalla ----------
+   El velo transparente se mantiene (evita pulsar dos veces); aparece solo si tarda mas de 150 ms. */
+#loader-global{background:transparent;backdrop-filter:none;cursor:progress}
+#loader-global .spinner{position:fixed;top:0;left:0;right:0;width:auto;height:3px;border:0;border-radius:0;
+  background:linear-gradient(90deg,transparent 0,var(--azul) 35%,#38bdf8 65%,transparent 100%);background-size:60% 100%;background-repeat:no-repeat;
+  box-shadow:0 0 10px rgba(56,189,248,.6);animation:fx-bar 1.1s linear infinite,fx-late .15s linear .15s backwards}
+
+/* ---------- Avisos (toasts) ---------- */
+.toast-sigti{position:relative;overflow:hidden;animation:fx-pop .38s var(--fx-spring)}
+.toast-sigti i{animation:fx-pop .5s var(--fx-spring) .1s backwards}
+.toast-sigti::after{content:'';position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.55);
+  transform-origin:left;animation:fx-timer 4s linear forwards}
+.toast-error::after,.toast-warning::after{animation-duration:6s}
+.toast-sigti:hover::after{animation-play-state:paused}
+
+/* ---------- Ventanas (modales) y menus ---------- */
+.modal.fade .modal-dialog{transform:translateY(26px) scale(.94);transition:transform .35s var(--fx-spring),opacity .2s ease}
+.modal.show .modal-dialog{transform:none}
+.modal-backdrop.show{opacity:.5;backdrop-filter:blur(2px)}
+.modal-content{border:0;box-shadow:0 24px 70px rgba(15,23,42,.28)}
+.dropdown-menu.show{animation:fx-drop .18s var(--fx-ease);transform-origin:top right}
+
+/* ---------- Menu lateral ---------- */
+#menu-nav .menu-item{animation:fx-menu .45s var(--fx-ease) backwards;animation-delay:calc(var(--fx-i,0) * 28ms + 120ms);
+  position:relative;transition:background .2s,color .2s,padding-left .2s var(--fx-ease)}
+.menu-item i{display:inline-block;transition:transform .25s var(--fx-spring)}
+.menu-item:hover{padding-left:26px}
+.menu-item:hover i{transform:scale(1.18) rotate(-6deg)}
+.menu-item.activo{background:linear-gradient(90deg,rgba(37,99,235,.34),rgba(37,99,235,.06));animation:fx-glow .9s ease-out}
+.menu-item.activo i{color:#93c5fd}
+.menu-seccion{animation:fx-fade .6s ease backwards;animation-delay:.1s}
+
+/* ---------- Barra superior ---------- */
+#btn-notificaciones,#btn-avatar,#btn-menu{transition:transform .2s var(--fx-spring),background .2s,box-shadow .2s}
+#btn-notificaciones:hover,#btn-avatar:hover{transform:scale(1.08)}
+#btn-avatar:hover{box-shadow:0 0 0 3px rgba(37,99,235,.25)}
+#btn-menu:hover{transform:scale(1.12)}
+#btn-notificaciones:active,#btn-avatar:active,#btn-menu:active{transform:scale(.92)}
+#icono-campana{display:inline-block;transform-origin:50% 0}
+#btn-notificaciones:has(.badge-notif:not(.hidden)) #icono-campana{animation:fx-ring 1.6s ease .4s 2}
+.badge-notif{animation:fx-pop .4s var(--fx-spring)}
+.badge-notif:not(.hidden)::after{content:'';position:absolute;inset:0;border-radius:inherit;animation:fx-ping 2.2s ease-out infinite}
+
+/* ---------- Botones ---------- */
+.btn{position:relative;overflow:hidden;transition:transform .15s var(--fx-ease),box-shadow .2s,background-color .2s,border-color .2s,color .2s}
+.btn:not(:disabled):not(.disabled):hover{transform:translateY(-1px)}
+.btn:not(:disabled):not(.disabled):active{transform:translateY(0) scale(.96)}
+.btn-primary:not(:disabled):hover,.btn-success:not(:disabled):hover,.btn-danger:not(:disabled):hover{box-shadow:0 6px 14px -4px rgba(15,23,42,.35)}
+.btn>i.bi{display:inline-block;transition:transform .25s var(--fx-spring)}
+.btn:not(:disabled):hover>i.bi{transform:scale(1.2)}
+.btn-group>.btn:hover,.btn-group-sm>.btn:hover,.input-group>.btn:hover{transform:none}
+.fx-ripple{position:absolute;border-radius:50%;pointer-events:none;background:currentColor;opacity:0;
+  transform:scale(0);animation:fx-ripple .6s ease-out}
+.btn-close{transition:transform .25s var(--fx-spring)}
+.btn-close:hover{transform:rotate(90deg)}
+
+/* ---------- Tarjetas y cifras ---------- */
+.mini-stat,.dash-card,.tarjeta-pendiente,.rp-kpi{transition:transform .25s var(--fx-ease),box-shadow .25s,border-color .25s}
+.mini-stat:hover,.rp-kpi:hover{transform:translateY(-3px);box-shadow:0 10px 22px -10px rgba(15,23,42,.28);border-color:#bfdbfe}
+.dash-card.clic:hover{transform:translateY(-3px);box-shadow:0 12px 24px -12px rgba(15,23,42,.35)}
+.dash-card.clic:active{transform:scale(.98)}
+.dash-card i.ic{transition:transform .35s var(--fx-spring)}
+.dash-card:hover i.ic{transform:scale(1.25) rotate(-8deg)}
+.dash-card.rojo{animation:fx-ping 2.6s ease-out infinite}
+.dash-al{transition:transform .2s var(--fx-ease),filter .2s}
+.dash-al:hover{transform:translateX(5px)}
+.dash-al.rojo>i:first-child{animation:fx-ping 2.2s ease-out infinite;border-radius:50%}
+.dash-rap a{transition:transform .2s var(--fx-spring),background .2s,border-color .2s,box-shadow .2s}
+.dash-rap a:hover{transform:translateY(-2px);box-shadow:0 6px 12px -6px rgba(37,99,235,.45)}
+.dash-rap a i{display:inline-block;transition:transform .25s var(--fx-spring)}
+.dash-rap a:hover i{transform:scale(1.25) rotate(-8deg)}
+.card{transition:box-shadow .25s,border-color .25s}
+.card.shadow-sm:hover{box-shadow:0 .5rem 1.2rem rgba(15,23,42,.1)!important}
+.card-bienvenida,.gd-hero{background-size:200% 200%;animation:fx-drift 16s ease-in-out infinite alternate}
+.progress-bar{transform-origin:left;animation:fx-grow .9s var(--fx-ease) backwards;transition:width .6s var(--fx-ease)}
+.modulo-construccion i,.tarjeta-pendiente i{display:inline-block;animation:fx-float 3.2s ease-in-out infinite}
+
+/* ---------- Tablas ---------- */
+.table tbody tr,table.dataTable tbody tr{animation:fx-row .35s var(--fx-ease) backwards}
+.table tbody tr:nth-child(2),table.dataTable tbody tr:nth-child(2){animation-delay:28ms}
+.table tbody tr:nth-child(3),table.dataTable tbody tr:nth-child(3){animation-delay:56ms}
+.table tbody tr:nth-child(4),table.dataTable tbody tr:nth-child(4){animation-delay:84ms}
+.table tbody tr:nth-child(5),table.dataTable tbody tr:nth-child(5){animation-delay:112ms}
+.table tbody tr:nth-child(6),table.dataTable tbody tr:nth-child(6){animation-delay:140ms}
+.table tbody tr:nth-child(7),table.dataTable tbody tr:nth-child(7){animation-delay:168ms}
+.table tbody tr:nth-child(8),table.dataTable tbody tr:nth-child(8){animation-delay:196ms}
+.table tbody tr:nth-child(9),table.dataTable tbody tr:nth-child(9){animation-delay:224ms}
+.table tbody tr:nth-child(10),table.dataTable tbody tr:nth-child(10){animation-delay:252ms}
+.table tbody tr:nth-child(11),table.dataTable tbody tr:nth-child(11){animation-delay:280ms}
+.table tbody tr:nth-child(12),table.dataTable tbody tr:nth-child(12){animation-delay:308ms}
+
+.table>tbody>tr>td,.table>tbody>tr>th{transition:background-color .15s,box-shadow .2s}
+.table-hover>tbody>tr:hover>td:first-child,table.dataTable tbody tr:hover>td:first-child{box-shadow:inset 3px 0 0 var(--azul)}
+table.dataTable thead th{transition:background-color .2s}
+table.dataTable thead th.sorting:hover,table.dataTable thead th.sorting_asc,table.dataTable thead th.sorting_desc{background-color:#eef4ff}
+div.dataTables_processing{background:linear-gradient(90deg,rgba(255,255,255,.2),rgba(37,99,235,.14),rgba(255,255,255,.2))!important;
+  background-size:200% 100%!important;animation:fx-drift 1s linear infinite;border-radius:10px;border:1px solid #bfdbfe}
+
+/* ---------- Pestanas ---------- */
+.nav-tabs .nav-link{position:relative;transition:color .2s,background-color .2s}
+.nav-tabs .nav-link::after{content:'';position:absolute;left:10%;right:10%;bottom:-1px;height:3px;border-radius:3px 3px 0 0;
+  background:var(--azul);transform:scaleX(0);transition:transform .35s var(--fx-spring)}
+.nav-tabs .nav-link.active::after{transform:scaleX(1)}
+.nav-tabs .nav-link:not(.active):hover{background:#f1f5f9}
+
+/* ---------- Formularios ---------- */
+.form-control,.form-select{transition:border-color .2s,box-shadow .25s,background-color .2s}
+.form-control:focus,.form-select:focus{box-shadow:0 0 0 .25rem rgba(37,99,235,.18)}
+.is-invalid,.login-error{animation:fx-shake .4s ease}
+.form-check-input{transition:transform .2s var(--fx-spring),background-color .2s,border-color .2s}
+.form-check-input:active{transform:scale(.85)}
+.form-check-input:checked{animation:fx-pop .3s var(--fx-spring)}
+.acc-check,.acc-chip{transition:transform .2s var(--fx-spring),background .2s,border-color .2s,color .2s}
+.acc-check:active{transform:scale(.94)}
+.acc-chip{animation:fx-pop .3s var(--fx-spring)}
+.item-checklist{transition:background .2s,border-color .2s,transform .2s var(--fx-ease)}
+.item-checklist:hover{transform:translateX(3px)}
+
+/* ---------- Linea de tiempo y chat ---------- */
+.tl-item{animation:fx-row .4s var(--fx-ease) backwards}
+.tl-item::before{transition:transform .25s var(--fx-spring)}
+.tl-item:hover::before{transform:scale(1.5)}
+#chat-btn-flotante{animation:fx-pop .6s var(--fx-spring) 1s backwards}
+#chat-btn-flotante:active{transform:scale(.92)}
+
+/* ---------- Inicio de sesion ---------- */
+.pantalla-login{background-size:220% 220%;animation:fx-drift 22s ease-in-out infinite alternate}
+.login-card{animation:fx-rise .7s var(--fx-ease) backwards}
+.login-logo{display:inline-block;animation:fx-float 3.4s ease-in-out infinite}
+.login-foto{animation:fx-pop .6s var(--fx-spring) .15s backwards}
+.login-card h1{animation:fx-fade .8s ease .2s backwards}
+.login-card form>*{animation:fx-rise .5s var(--fx-ease) backwards}
+.login-card form>*:nth-child(1){animation-delay:.25s}.login-card form>*:nth-child(2){animation-delay:.3s}
+.login-card form>*:nth-child(3){animation-delay:.35s}.login-card form>*:nth-child(4){animation-delay:.4s}
+.login-card form>*:nth-child(5){animation-delay:.45s}.login-card form>*:nth-child(6){animation-delay:.5s}
+#btn-login{transition:background .2s,transform .15s var(--fx-ease),box-shadow .25s}
+#btn-login:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 10px 20px -8px rgba(37,99,235,.7)}
+#btn-login:active:not(:disabled){transform:scale(.97)}
+
+/* ---------- Centro de ayuda ---------- */
+.gd-card,.gd-chip{transition:transform .25s var(--fx-ease),box-shadow .25s,background .2s,color .2s,border-color .2s}
+.gd-chip:hover{transform:translateY(-1px);border-color:#93c5fd}
+.gd-ico{transition:transform .35s var(--fx-spring)}
+.gd-card:hover .gd-ico{transform:rotate(-8deg) scale(1.12)}
+.gd-paso{animation:fx-row .4s var(--fx-ease) backwards}
+.gd-paso:nth-child(2){animation-delay:.04s}.gd-paso:nth-child(3){animation-delay:.08s}.gd-paso:nth-child(4){animation-delay:.12s}
+.gd-paso:nth-child(5){animation-delay:.16s}.gd-paso:nth-child(n+6){animation-delay:.2s}
+mark.gd-m{animation:fx-pop .3s var(--fx-spring)}
+
+/* ---------- Diseño: las tablas anchas se desplazan dentro del contenido,
+   no por debajo del menu lateral fijo ---------- */
+#contenido{min-width:0}
+#vista-container{min-width:0;overflow-x:auto}
