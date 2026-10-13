@@ -1,0 +1,2 @@
+Scripts OPCIONALES para ACTUALIZAR instalaciones anteriores a cada fecha.
+Una instalacion nueva solo necesita db/sigti.sql (el sistema crea solo las tablas y columnas nuevas la primera vez que se usan).
