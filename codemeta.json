@@ -1,0 +1,16 @@
+{
+  "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
+  "@type": "SoftwareSourceCode",
+  "name": "SIGTI — Plataforma de Servicio TI",
+  "version": "1.0",
+  "dateCreated": "2026",
+  "dateModified": "2026-10-13",
+  "programmingLanguage": ["PHP", "JavaScript", "SQL"],
+  "runtimePlatform": "XAMPP (Apache + PHP + MariaDB)",
+  "identifier": "SIGTI-DEV-AMA-2026",
+  "license": "https://spdx.org/licenses/LicenseRef-Todos-los-derechos-reservados",
+  "copyrightHolder": { "@type": "Person", "@id": "https://orcid.org/0000-0003-1788-1978", "givenName": "Alejandro Aldo", "familyName": "Meneses Aliaga" },
+  "author": [
+    { "@type": "Person", "@id": "https://orcid.org/0000-0003-1788-1978", "givenName": "Alejandro Aldo", "familyName": "Meneses Aliaga" }
+  ]
+}

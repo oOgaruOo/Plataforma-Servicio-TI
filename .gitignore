@@ -1,0 +1,15 @@
+# Datos de cada empresa (no se suben)
+storage/*
+!storage/.htaccess
+!storage/.version
+!storage/agente-rastreo.bat
+!storage/*/
+storage/*/*
+!storage/*/.gitkeep
+# Configuracion local (copiar config/config.php y ajustar la base de datos)
+# config/config.php
+*.log
+*.bak
+*.tmp
+Thumbs.db
+.DS_Store

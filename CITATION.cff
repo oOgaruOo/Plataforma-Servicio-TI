@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "Si utiliza o cita este software, por favor cítelo con estos datos."
+title: "SIGTI — Plataforma de Servicio TI"
+type: software
+version: "1.0"
+date-released: "2026-10-13"
+abstract: "Sistema integral para el área de Sistemas: mesa de ayuda, inventario de equipos, software y licencias, asignaciones y actas, mantenimiento, capacitaciones, rastreo, chat interno, reportes y auditoría."
+license: "LicenseRef-Todos-los-derechos-reservados"
+authors:
+  - family-names: "Meneses Aliaga"
+    given-names: "Alejandro Aldo"
+    orcid: "https://orcid.org/0000-0003-1788-1978"
+keywords:
+  - mesa de ayuda
+  - inventario TI
+  - gestión de licencias
+  - PHP
+  - MySQL
+identifiers:
+  - type: other
+    value: "SIGTI-DEV-AMA-2026"
+    description: "Código de autor del sistema"
