@@ -8,8 +8,13 @@ REM
 REM INSTALACION:
 REM   1. Copiar este archivo a C:\ProgramData\sigti-rastreo.bat
 REM   2. Editar SERVIDOR y TOKEN (el token se ve en el Detalle del equipo > Ver token)
-REM   3. Abrir CMD como administrador y ejecutar:
-REM      schtasks /create /tn "SIGTI-Rastreo" /tr "C:\ProgramData\sigti-rastreo.bat" /sc minute /mo 5 /ru SYSTEM
+REM   3. Copiar tambien sigti-rastreo-oculto.vbs a C:\ProgramData\ (viene junto a este .bat)
+REM   4. Abrir CMD como administrador y ejecutar:
+REM      schtasks /create /tn "SIGTI-Rastreo" /tr "wscript.exe //B C:\ProgramData\sigti-rastreo-oculto.vbs" /sc minute /mo 5 /ru SYSTEM
+REM
+REM   IMPORTANTE: no programe este .bat directo (/tr "C:\ProgramData\sigti-rastreo.bat"): el Programador
+REM   de tareas de Windows SIEMPRE muestra un cmd negro al ejecutar un .bat. El .vbs lo lanza oculto,
+REM   sin ninguna ventana visible (el personal no nota que el equipo esta reportando).
 REM ============================================================
 
 REM ---- CONFIGURAR ----
