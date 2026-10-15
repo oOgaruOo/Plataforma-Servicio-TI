@@ -40,6 +40,9 @@ else:
         'titulo' => 'Proveedores', 'nuevo' => 'Nuevo Proveedor',
         'columnas' => ['Documento', 'Nombre', 'Contacto', 'Telefono', 'Correo', 'Especialidad', 'Estado', ''],
     ],
+    'notificaciones' => [
+        'titulo' => 'Correo y WhatsApp', 'personalizado' => true,
+    ],
 ];
  $primero = true;
 ?>
@@ -60,6 +63,38 @@ else:
     <div class="tab-content">
       <?php $primero = true; foreach ($tabs as $tipo => $t): ?>
         <div class="tab-pane fade <?= $primero ? 'show active' : '' ?>" id="tab-<?= $tipo ?>">
+          <?php if (!empty($t['personalizado']) && $tipo === 'notificaciones'): ?>
+            <div class="alert alert-light border py-2 small">
+              <i class="bi bi-info-circle text-primary"></i>
+              Cuando estos canales estén <strong>activos</strong>, los <strong>Anuncios</strong> (menú General &rsaquo; Anuncios)
+              que se publiquen con <em>“Avisar por notificación”</em> marcado también se mandarán por correo y/o WhatsApp
+              a quienes les llega el anuncio, además de la notificación interna. No hace falta nada más en Anuncios.
+            </div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-envelope"></i> Correo (SMTP)</h6>
+                    <p class="card-text small text-muted mb-3" id="ncf-correo-estado">Cargando…</p>
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-config-correo">
+                      <i class="bi bi-gear"></i> Configurar correo
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-whatsapp"></i> WhatsApp</h6>
+                    <p class="card-text small text-muted mb-3" id="ncf-whatsapp-estado">Cargando…</p>
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-config-whatsapp">
+                      <i class="bi bi-gear"></i> Configurar WhatsApp
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <?php else: ?>
           <?php if ($tipo === 'proyectos'): ?>
             <div class="alert alert-light border py-2 small">
               <i class="bi bi-info-circle text-primary"></i>
@@ -97,6 +132,7 @@ else:
               </tr>
             </thead>
           </table>
+          <?php endif; ?>
         </div>
       <?php $primero = false; endforeach; ?>
     </div>

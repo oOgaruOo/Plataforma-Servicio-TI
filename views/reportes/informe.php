@@ -2,7 +2,7 @@
 // @autor Ing. Alejandro Aldo Meneses Aliaga · ORCID 0000-0003-1788-1978 · Código de autor: SIGTI-DEV-AMA-2026 · © 2026
 // ============================================================
 // SIGTI - Informe imprimible (gerencia / auditoria)
-// URL: views/reportes/informe.php?modulo=resumen|tickets|mantenimiento|inventario|software|asignaciones|personal&desde=&hasta=
+// URL: views/reportes/informe.php?modulo=resumen|tickets|mantenimiento|inventario|software|asignaciones|personal|rrhh&desde=&hasta=
 // Se abre en otra pestana; Ctrl+P o el boton para imprimir / guardar como PDF.
 // ============================================================
 require_once __DIR__ . '/../../core/guard_vista.php';
@@ -89,6 +89,7 @@ switch ($modulo) {
     case 'inventario':    $d = Reportes::inventario($r); break;
     case 'software':      $d = Reportes::software($r); break;
     case 'asignaciones':  $d = Reportes::asignaciones($r); break;
+    case 'rrhh':          $d = Reportes::rrhh($r, $area); break;
     default:              $d = Reportes::personal($r, $area);
 }
 Auditoria::registrar('exportar', 'reportes', null, null, ['modulo' => $modulo, 'formato' => 'impresion', 'desde' => $r['desde'], 'hasta' => $r['hasta']],
@@ -262,6 +263,20 @@ $titulo = Reportes::TITULOS[$modulo] ?? $modulo;
   <?php rp_tabla(['Equipo', 'Destino', 'Debía devolverse', ['Atraso', 'n']], array_map(fn($x) => [$x['equipo'] . ' ' . trim($x['equipo_desc']), $x['destino'], rp_f($x['fecha_devolucion_esperada']), [$x['dias_atraso'] . ' días', 'n mal']], $d['prestamos_vencidos']), 'No hay devoluciones vencidas.'); ?>
   <h2>6. Actas pendientes de firma</h2>
   <?php rp_tabla(['Acta', 'Tipo', 'Destino', 'Fecha', ['Días', 'n']], array_map(fn($x) => [$x['codigo'], $x['tipo'], $x['destino'], rp_f($x['fecha']), $x['dias']], $d['actas_pendientes']), 'No hay actas pendientes.'); ?>
+
+<?php elseif ($modulo === 'rrhh'): $q = $d['tarjetas']; ?>
+  <h2>1. Indicadores</h2>
+  <?php rp_kpis([
+      [$q['en_curso'], 'Vacantes pendientes', $q['atrasados'] ? 'mal' : ''], [$q['pendientes'], 'Pendientes de tomar'], [$q['en_proceso'], 'En proceso'],
+      [$q['cubiertos'], 'Cubiertas', 'ok'], [$q['atrasados'], 'Atrasadas (pasó la fecha límite)', $q['atrasados'] ? 'mal' : 'ok'],
+      [$q['promedio_dias_cobertura'] === null ? '—' : $q['promedio_dias_cobertura'] . ' días', 'Tiempo promedio de cobertura'],
+  ]); ?>
+  <div class="dos">
+    <div><h2>2. Solicitadas por mes</h2><?php rp_barras(rp_serie($d['meses'], $d['creados'])); ?></div>
+    <div><h2>3. Cubiertas por mes</h2><?php rp_barras(rp_serie($d['meses'], $d['cubiertos'])); ?></div>
+  </div>
+  <h2>4. Por estado</h2><?php rp_barras(array_map(fn($e) => [Requerimientos::ESTADOS[$e['estado']][0] ?? $e['estado'], $e['n']], $d['por_estado'])); ?>
+  <h2>5. Por área</h2><?php rp_barras(array_map(fn($e) => [$e['nombre'], $e['n']], $d['por_area'])); ?>
 
 <?php else: $p = $d['tarjetas']; ?>
   <h2>1. Indicadores</h2>

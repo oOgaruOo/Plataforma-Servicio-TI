@@ -72,11 +72,33 @@ if (!$puedeVer):
             <b class="small text-danger"><i class="bi bi-exclamation-triangle"></i> SLA interna vencida (sin cerrar)</b>
             <div id="mt-p-sla" class="small mt-1 text-muted">Nada vencido. ✔</div>
           </div></div>
+          <div class="col-12"><hr class="my-1"></div>
+          <div class="col-12 col-lg-4"><div class="border rounded p-2">
+            <b class="small"><i class="bi bi-stopwatch"></i> Tiempo promedio de atención</b>
+            <div class="small mt-2">General: <b id="mt-p-tprom">—</b></div>
+            <div id="mt-p-tprom-tipo" class="small mt-1 text-muted">Sin datos aún.</div>
+          </div></div>
+          <div class="col-12 col-lg-4"><div class="border rounded p-2">
+            <b class="small"><i class="bi bi-truck"></i> Top proveedores</b>
+            <div id="mt-p-proveedores" class="small mt-1 text-muted">Sin mantenimientos con proveedor aún.</div>
+          </div></div>
+          <div class="col-12 col-lg-4"><div class="border rounded p-2">
+            <b class="small"><i class="bi bi-person-gear"></i> Top técnicos internos</b>
+            <div id="mt-p-tecnicos" class="small mt-1 text-muted">Sin mantenimientos internos aún.</div>
+          </div></div>
+          <div class="col-12"><div class="border rounded p-2">
+            <b class="small text-warning-emphasis"><i class="bi bi-arrow-repeat"></i> Equipos con fallas recurrentes (últimos 12 meses)</b>
+            <div id="mt-p-topequipos" class="small mt-1 text-muted">Sin equipos con 2 o más mantenimientos aún.</div>
+          </div></div>
         </div>
       </div>
 
       <div class="tab-pane fade" id="tab-mt">
         <div class="row g-2 mb-3">
+          <div class="col-12 col-md-3">
+            <input type="text" id="mtf-buscar" class="form-control form-control-sm"
+                   placeholder="Buscar por código, equipo, proveedor, técnico o ticket…">
+          </div>
           <div class="col-6 col-md-3">
             <select id="mtf-estado" class="form-select form-select-sm">
               <option value="">Todos los estados</option>
@@ -133,6 +155,19 @@ if (!$puedeVer):
           </div>
         </div>
 
+        <div class="d-flex justify-content-end mb-2">
+          <div class="btn-group">
+            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown"
+                    title="Descargar la lista con los filtros aplicados">
+              <i class="bi bi-download"></i> Exportar
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="#" id="btn-exportar-mt-csv"><i class="bi bi-filetype-csv"></i> CSV (para Excel)</a></li>
+              <li><a class="dropdown-item" href="#" id="btn-exportar-mt-xls"><i class="bi bi-file-earmark-excel"></i> Excel con formato</a></li>
+            </ul>
+          </div>
+        </div>
+
         <table id="tb-mt" class="table table-bordered table-hover align-middle w-100">
           <thead>
             <tr>
@@ -160,14 +195,30 @@ if (!$puedeVer):
             </button>
           <?php endif; ?>
         </div>
-        <div class="d-flex justify-content-end mb-2">
-          <?php if ($puedeCrear): ?>
-            <button id="btn-nuevo-prog" class="btn btn-primary btn-sm">
-              <i class="bi bi-plus-lg"></i> Programar preventivo
-            </button>
-          <?php endif; ?>
+        <div class="row g-2 mb-2 align-items-center">
+          <div class="col-12 col-md-5">
+            <input type="text" id="prevf-buscar" class="form-control form-control-sm"
+                   placeholder="Buscar por equipo, marca, tipo o responsable…">
+          </div>
+          <div class="col-6 col-md-3">
+            <select id="prevf-situacion" class="form-select form-select-sm">
+              <option value="">Toda situación</option>
+              <option value="vencida">Vencida</option>
+              <option value="por_vencer">Por vencer</option>
+              <option value="en_curso">En curso</option>
+              <option value="al_dia">Al día</option>
+              <option value="pausada">Pausada</option>
+            </select>
+          </div>
+          <div class="col-6 col-md-4 text-end">
+            <?php if ($puedeCrear): ?>
+              <button id="btn-nuevo-prog" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-lg"></i> Programar preventivo
+              </button>
+            <?php endif; ?>
+          </div>
         </div>
-        <table class="table table-bordered table-hover align-middle tabla-mini">
+        <table id="tb-prev" class="table table-bordered table-hover align-middle tabla-mini">
           <thead>
             <tr>
               <th>Equipo</th><th>Tipo</th><th>Frecuencia</th><th>Último realizado</th>
@@ -198,7 +249,8 @@ if (!$puedeVer):
             $ciclo = Programados::estadoCiclo($p, $hoyP);
             $dias  = Programados::dias((string)$p['proxima_fecha'], $hoyP);
           ?>
-            <tr data-ciclo="<?= $ciclo ?>">
+            <tr data-ciclo="<?= $ciclo ?>"
+                data-busca="<?= htmlspecialchars(mb_strtolower($p['eq'].' '.$p['marca'].' '.$p['modelo'].' '.$p['tipo_eq'].' '.$p['tipo'].' '.($p['resp'] ?: ''))) ?>">
               <td><b><?= htmlspecialchars($p['eq']) ?></b><br>
                   <span class="text-muted small"><?= htmlspecialchars($p['tipo_eq'].' '.$p['marca']) ?></span></td>
               <td><?= htmlspecialchars(ucfirst($p['tipo'])) ?></td>
@@ -245,6 +297,7 @@ if (!$puedeVer):
               </td>
             </tr>
           <?php endforeach; endif; ?>
+          <tr id="prev-sin-resultados" class="d-none"><td colspan="8" class="text-muted text-center">Sin resultados para el filtro aplicado</td></tr>
           </tbody>
         </table>
         <div class="text-muted small">

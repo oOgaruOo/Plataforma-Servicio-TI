@@ -1,0 +1,122 @@
+PUENTE DE WHATSAPP PARA SIGTI
+==============================
+
+Que es esto
+-----------
+SIGTI (el sistema PHP) no habla el protocolo de WhatsApp por si mismo.
+Esta carpeta es un servicio APARTE, escrito en Node.js, que mantiene la
+sesion de WhatsApp vinculada (como WhatsApp Web, con codigo QR) y le
+ofrece a SIGTI una direccion HTTP sencilla para preguntarle el estado
+y para pedirle que mande mensajes. Se usa para que los "Anuncios" del
+sistema tambien se puedan avisar por WhatsApp, ademas de por correo y
+por notificacion interna.
+
+Este servicio debe quedar SIEMPRE ENCENDIDO en el mismo equipo donde
+este corriendo XAMPP (o en otro equipo de la misma red, si asi se
+configura). Si se apaga, SIGTI simplemente no podra mandar WhatsApp
+hasta que se vuelva a encender (el correo y las notificaciones internas
+siguen funcionando igual).
+
+Requisitos
+----------
+- Tener Node.js instalado (version 18 o mas nueva). Para revisar si ya
+  lo tiene: abra una consola (cmd) y escriba "node -v". Si no sale un
+  numero de version, descarguelo de https://nodejs.org (la version
+  "LTS").
+- Un numero de WhatsApp dedicado para el sistema (recomendado: no usar
+  el WhatsApp personal de alguien, porque ese celular debe quedar
+  siempre con internet para que el vinculo no se corte).
+
+Instalacion, paso a paso
+------------------------
+1. Abra una consola (cmd) dentro de esta carpeta "whatsapp-bridge".
+   (En el Explorador de Windows: escriba "cmd" en la barra de
+   direcciones de esta carpeta y presione Enter).
+
+2. Instale las dependencias:
+
+       npm install
+
+   Esto descarga los paquetes necesarios (tarda uno o dos minutos la
+   primera vez). Crea una carpeta "node_modules" que NO hay que tocar
+   ni copiar a otro lado.
+
+3. Copie el archivo ".env.example" y renombre la copia a ".env".
+   Edite ".env" con el Bloc de notas y complete:
+     - PUERTO: el numero de puerto donde va a escuchar (por defecto
+       3300 esta bien si no lo usa nada mas en este equipo).
+     - TOKEN: invente una clave larga y dificil de adivinar (letras y
+       numeros). Esta clave hay que volver a escribirla, EXACTAMENTE
+       igual, en SIGTI (Configuracion > Correo y WhatsApp > WhatsApp).
+     - HOST: dejelo en 127.0.0.1 si SIGTI corre en este mismo equipo
+       (lo normal). Solo cambielo a 0.0.0.0 si SIGTI esta en OTRO
+       equipo de la red, y en ese caso revise el firewall de Windows.
+
+4. Inicie el puente:
+
+       npm start
+
+   Si todo esta bien, va a aparecer un mensaje como:
+
+       Puente de WhatsApp escuchando en http://127.0.0.1:3300
+
+   Deje esa ventana de consola abierta (minimizada esta bien). Si la
+   cierra, el puente se apaga y SIGTI deja de poder mandar WhatsApp.
+
+5. En SIGTI, entre como administrador a Configuracion > "Correo y
+   WhatsApp", abra la tarjeta de WhatsApp, pegue la misma direccion
+   (por ejemplo http://127.0.0.1:3300) y el mismo TOKEN que puso en el
+   paso 3, y guarde. Ahi mismo va a aparecer un codigo QR.
+
+6. Desde el celular que va a usar el sistema: abra WhatsApp > los tres
+   puntos (o Ajustes) > "Dispositivos vinculados" > "Vincular un
+   dispositivo", y escanee el codigo QR que muestra SIGTI. En unos
+   segundos deberia aparecer como "Vinculado" con el numero de
+   telefono.
+
+Que pasa despues de vincular
+-----------------------------
+Una vez vinculado y con la casilla "Activo" marcada en Configuracion,
+cada vez que se publique un Anuncio con "Avisar por notificacion"
+marcado, el sistema va a intentar mandarlo tambien por WhatsApp (y por
+correo, si ese otro canal tambien esta activo) a cada persona que tenga
+un numero de telefono registrado.
+
+Si la sesion se cierra (por ejemplo, si alguien la cierra desde el
+celular, o si el telefono estuvo mucho tiempo sin internet), en SIGTI
+va a volver a aparecer el codigo QR para vincular de nuevo. Esto NO
+borra la configuracion (direccion y token): solo hay que volver a
+escanear.
+
+Para desvincular el numero a proposito (por ejemplo, para cambiar de
+numero), use el boton "Desvincular" dentro de la misma pantalla de
+Configuracion en SIGTI.
+
+Mantener el puente encendido todo el tiempo
+--------------------------------------------
+Para que no dependa de dejar la consola abierta, lo mas practico en
+Windows es crear una tarea programada que ejecute, al iniciar el
+equipo:
+
+    npm start
+
+dentro de esta carpeta (o usar una herramienta como "pm2" o "NSSM"
+para correrlo como servicio de Windows, si quien instala el sistema
+ya conoce esas herramientas). Esto es opcional: con dejar la consola
+abierta ya funciona.
+
+Preguntas frecuentes
+---------------------
+- "¿Es el WhatsApp Business oficial de Meta?" No. Este puente usa el
+  mismo mecanismo que WhatsApp Web (vinculo por QR), no la API oficial
+  de Meta ni un servicio como Twilio. Es la opcion que se eligio para
+  este proyecto porque no requiere aprobacion ni costo por mensaje,
+  pero el numero queda vinculado como un "dispositivo" mas de ese
+  WhatsApp.
+- "¿Puedo usar mi WhatsApp personal?" Se puede, pero no se recomienda:
+  ese celular debe quedar siempre con internet, y si alguien cierra
+  sesion desde el celular (por error o a proposito) el envio se corta
+  hasta volver a escanear.
+- "No me aparece el mensaje de 'escuchando' al hacer npm start" -
+  revise que haya copiado bien el archivo ".env" (no ".env.example")
+  y que el PUERTO no lo este usando otro programa.

@@ -76,7 +76,7 @@ require_once __DIR__ . '/../../core/guard_vista.php';
 
 <table>
   <tr><th>Origen de la ubicación</th><th>Precisión</th><th>Cuándo se usa</th></tr>
-  <tr><td><b>GPS / Wi-Fi de Windows</b></td><td>Decenas de metros</td><td>El equipo tiene <i>Ubicación</i> activada (Configuración &rsaquo; Privacidad &rsaquo; Ubicación)</td></tr>
+  <tr><td><b>GPS / Wi-Fi de Windows</b></td><td>Decenas de metros</td><td>El equipo tiene <i>Ubicación</i> activada (Configuración &rsaquo; Privacidad &rsaquo; Ubicación). El agente espera unos segundos y se queda con la lectura más precisa, no con la primera</td></tr>
   <tr><td><b>Sede conocida</b></td><td>La oficina / obra</td><td>La red del equipo coincide con una sede registrada en <i>Sedes y redes</i></td></tr>
   <tr><td><b>Aproximada (Windows sin GPS)</b></td><td>Cientos de metros a varios km</td><td>Windows informa una posición con margen mayor a 1,5 km (laptops sin GPS). Se muestra como <i>Aproximada</i>; si la red está en <i>Sedes y redes</i> con coordenadas, se usa la sede. <b>Registre la sede de cada oficina</b> para ver la dirección correcta</td></tr>
   <tr><td><b>IP pública</b></td><td>Solo aproximada (ciudad)</td><td>No hay posición ni sede. Sirve de pista, no de dirección exacta</td></tr>
@@ -101,6 +101,9 @@ require_once __DIR__ . '/../../core/guard_vista.php';
   <div class="comando">powershell -ExecutionPolicy Bypass -File .\sigti-rastreo-CODIGO.ps1 -Instalar</div>
   <p>Esto crea la tarea programada <code>SIGTI-Rastreo</code> (cada 5 minutos y al iniciar sesión) y hace el primer reporte.
   Para probar sin instalar: el mismo comando sin <code>-Instalar</code>. Para quitarlo: <code>-Desinstalar</code>.</p>
+  <p>La tarea se ejecuta <b>totalmente oculta</b>: no aparece ninguna ventana de PowerShell ni de CMD en ningún
+  momento (se lanza a través de un pequeño script invisible), y además queda como tarea oculta en el
+  Programador de tareas. El personal no ve ni nota que el equipo está reportando.</p>
 </div>
 <div class="paso">
   <span class="paso-num">4</span>
@@ -110,8 +113,10 @@ require_once __DIR__ . '/../../core/guard_vista.php';
 
 <div class="alerta">
   <b>Alternativa mínima (.bat):</b> el archivo <code>storage/agente-rastreo.bat</code> reporta solo IP, MAC y nombre (sin Wi-Fi ni posición).
-  Edite <code>SERVIDOR</code> y <code>TOKEN</code> (el token se ve con <i>Ver token</i> en el detalle del equipo) y prográmelo:
-  <div class="comando">schtasks /create /tn "SIGTI-Rastreo" /tr "C:\ProgramData\sigti-rastreo.bat" /sc minute /mo 5 /ru SYSTEM</div>
+  Edite <code>SERVIDOR</code> y <code>TOKEN</code> (el token se ve con <i>Ver token</i> en el detalle del equipo), copie junto a él
+  <code>storage/sigti-rastreo-oculto.vbs</code> y programe la tarea apuntando al <code>.vbs</code> (no al <code>.bat</code> directo,
+  porque el Programador de tareas siempre muestra un cmd negro al ejecutar un .bat):
+  <div class="comando">schtasks /create /tn "SIGTI-Rastreo" /tr "wscript.exe //B C:\ProgramData\sigti-rastreo-oculto.vbs" /sc minute /mo 5 /ru SYSTEM</div>
 </div>
 
 <h2>&#128269; Paso 3: Verificar</h2>

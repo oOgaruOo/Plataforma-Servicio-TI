@@ -60,8 +60,16 @@ require_once __DIR__ . '/../../core/guard_vista.php';
         <div class="chat-barra d-none" id="ch-barra"></div>
         <div class="chat-menciones d-none" id="ch-menciones"></div>
         <div class="chat-emojis d-none" id="ch-emojis"></div>
+        <div class="chat-stickers d-none" id="ch-stickers"></div>
+        <div class="chat-grabando d-none" id="ch-grabando">
+          <span class="punto"></span><span id="ch-grab-tiempo">0:00</span>
+          <button type="button" id="ch-grab-cancelar" title="Cancelar"><i class="bi bi-trash"></i></button>
+          <button type="button" id="ch-grab-enviar" title="Enviar"><i class="bi bi-send-fill"></i></button>
+        </div>
         <div class="chat-escribir">
           <button type="button" id="ch-emoji-btn" class="btn btn-light" title="Emojis">😊</button>
+          <button type="button" id="ch-sticker-btn" class="btn btn-light" title="Stickers"><i class="bi bi-images"></i></button>
+          <button type="button" id="ch-mic-btn" class="btn btn-light" title="Grabar nota de voz"><i class="bi bi-mic-fill"></i></button>
           <button type="button" id="ch-adj-btn" class="btn btn-light" title="Adjuntar archivo o imagen (también puede pegar una captura)"><i class="bi bi-paperclip"></i></button>
           <input type="file" id="ch-adj" class="d-none" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip">
           <textarea id="ch-campo" rows="1" maxlength="1000" placeholder="Escriba un mensaje… (@ para mencionar · Enter envía · Mayús+Enter salto de línea)"></textarea>

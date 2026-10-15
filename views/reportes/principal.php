@@ -14,6 +14,7 @@ if (!$alc):
         'software'      => ['bi-app-indicator', 'Software'],
         'asignaciones'  => ['bi-box-seam', 'Asignaciones y actas'],
         'personal'      => ['bi-people', 'Personal'],
+        'rrhh'          => ['bi-person-plus', 'RR.HH.'],
     ];
 ?>
 <div id="rp-raiz" data-modulos="<?= htmlspecialchars(implode(',', $alc['modulos'])) ?>" data-solo-area="<?= $alc['area'] ? 1 : 0 ?>">
@@ -48,7 +49,7 @@ if (!$alc):
           </div>
         </div>
       </div>
-      <div class="small text-muted mt-1 d-none" id="rp-aviso-area"><i class="bi bi-info-circle"></i> Su permiso cubre los reportes de su área: tickets y personal.</div>
+      <div class="small text-muted mt-1 d-none" id="rp-aviso-area"><i class="bi bi-info-circle"></i> Su permiso cubre los reportes de su área: tickets, personal y RR.HH.</div>
     </div>
   </div>
 

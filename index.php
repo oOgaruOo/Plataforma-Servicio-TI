@@ -31,6 +31,7 @@ require_once __DIR__ . '/core/bootstrap.php';
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <link href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+<link href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link href="<?= BASE_URL ?>assets/css/sigti.css?v=<?= $v('/assets/css/sigti.css') ?>" rel="stylesheet">
 <link href="<?= BASE_URL ?>assets/css/sigti-fx.css?v=<?= $ver ?>" rel="stylesheet">
@@ -177,6 +178,8 @@ require_once __DIR__ . '/core/bootstrap.php';
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -189,6 +192,7 @@ require_once __DIR__ . '/core/bootstrap.php';
 <script src="<?= BASE_URL ?>assets/js/core/ajax.js?v=<?= $ver ?>"></script>
 <script src="<?= BASE_URL ?>assets/js/core/foto.js?v=<?= $ver ?>"></script>
 <script src="<?= BASE_URL ?>assets/js/core/documento.js?v=<?= $ver ?>"></script>
+<script src="<?= BASE_URL ?>assets/js/core/canales.js?v=<?= $ver ?>"></script>
 <script src="<?= BASE_URL ?>assets/js/core/visor.js?v=<?= $ver ?>"></script>
 <script src="<?= BASE_URL ?>assets/js/core/autor.js?v=<?= $ver ?>"></script>
 <script src="<?= BASE_URL ?>assets/js/core/sistema.js?v=<?= $ver ?>"></script>
@@ -221,6 +225,11 @@ require_once __DIR__ . '/core/bootstrap.php';
 <script src="<?= BASE_URL ?>assets/js/app/guias.js?v=<?= $ver ?>"></script>
 <script src="<?= BASE_URL ?>assets/js/app/auditoria.js?v=<?= $ver ?>"></script>
 <script src="<?= BASE_URL ?>assets/js/app/licencia.js?v=<?= $ver ?>"></script>
+<script src="<?= BASE_URL ?>assets/js/app/contratos.js?v=<?= $ver ?>"></script>
+<script src="<?= BASE_URL ?>assets/js/app/vacaciones.js?v=<?= $ver ?>"></script>
+<script src="<?= BASE_URL ?>assets/js/app/asistencia.js?v=<?= $ver ?>"></script>
+<script src="<?= BASE_URL ?>assets/js/app/planillas.js?v=<?= $ver ?>"></script>
+<script src="<?= BASE_URL ?>assets/js/app/requerimientos.js?v=<?= $ver ?>"></script>
 
 <script>
 window.SIGTI_INFO = <?= json_encode(Autor::datos() + ['version' => trim($ver)], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;

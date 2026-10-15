@@ -1,0 +1,629 @@
+SIGTI - Actualizacion completa (reemplaza al "Arreglos-SIGTI.zip" anterior, que estaba incompleto)
+
+1. Haga una copia de respaldo de C:\xampp\htdocs\Plataforma-Servicio-TI (y de la base de datos).
+2. Copie la carpeta "Plataforma-Servicio-TI" de este zip ENCIMA de la carpeta del proyecto
+   (acepte reemplazar archivos). No incluye config/config.php, asi que su configuracion y
+   sus datos no se tocan.
+3. No hace falta ejecutar nada en la base de datos: el sistema crea solo las columnas y tablas
+   nuevas la primera vez que se usan (incluidas las del Chat). (Si prefiere hacerlo a mano estan en db/migraciones/.)
+4. En el navegador pulse Ctrl+F5 para recargar los archivos nuevos.
+
+Novedades de esta version:
+- Personal: casillas para seleccionar personas (se conservan al paginar) y el menu "Seleccionados":
+  etiquetas del personal, etiquetas de lockers, copiar correos y descargar la lista en CSV.
+- Chat (menu General > Chat, y el boton azul flotante con el contador de mensajes sin leer):
+  persona con persona, area con area (canal entre dos areas), canal de cada area, grupos
+  (con administradores) y reuniones (uno con varios, con enlace de videollamada y avisos).
+  Tambien: emojis, adjuntar archivos e imagenes (tambien se pega una captura), responder a un mensaje,
+  mencionar con @, editar y borrar mensajes, reacciones y sonido de aviso (se silencia con la campana).
+  Los archivos del chat se guardan en storage/chat (no son accesibles por URL directa).
+  En los chats directos el area de Sistemas puede supervisar la conversacion (solo lectura) y la
+  pantalla se lo avisa a los participantes.
+- Actas de entrega, devolucion y cambio de equipos, segun el TIPO de equipo (computo, moviles,
+  impresion, red, energia, visualizacion, perifericos, telefonia y otros). Cada acta trae sus propios
+  datos tecnicos (IMEI y linea en celulares, MAC/IP en red, capacidad en UPS...), su lista de
+  verificacion de TI y sus clausulas de uso y devolucion. Las actas se generan solas:
+    * Asignaciones > Registrar entrega (entrega, prestamo, traslado) -> acta de entrega.
+    * Asignaciones > Registrar entrega con operacion "cambio" -> acta de cambio (equipo que se retira y equipo nuevo).
+    * Asignaciones > boton Recibir -> acta de devolucion (con condicion, motivo, faltantes e inspeccion segun el tipo).
+    * Personal > procesar cese -> acta de devolucion por cese (si se usa ese proceso).
+  Menu Actas: lista con filtros por movimiento, tipo de equipo y firmada/pendiente; "Generar acta"
+  documenta movimientos que quedaron sin acta (incluso varios equipos del mismo destino);
+  "Codigos de formato" define el codigo (LUMAT-TI-FOR-00X) por tipo de equipo y movimiento;
+  "Encabezado" cambia logo y datos de la empresa. Las actas ya emitidas no cambian.
+  Los textos de las clausulas son una propuesta: conviene que RR.HH. / Legal los revise.
+- Permisos (Configuracion > Permisos): tres pestanas. "Catalogo" (buscar, filtrar por modulo, crear/editar/duplicar
+  permisos; los permisos base del sistema no se pueden borrar), "Matriz por rol" (casillas rol x permiso, con
+  proteccion para no quitarse a si mismo el acceso a Permisos/Usuarios) y "Ajustes por usuario" (permisos concedidos
+  o revocados a una persona sobre lo que ya da su rol, con aviso de ajustes redundantes). Todo queda en Auditoria.
+- Auditoria: tarjetas de resumen (acciones, intentos fallidos, usuarios), grafico de 14 dias, filtros rapidos (hoy, 7 y 30 dias,
+  solo seguridad), filtros por usuario, modulo, accion y resultado, orden del mas reciente al mas antiguo,
+  detalle con comparacion antes/despues, historial del registro y boton "Exportar CSV" de lo filtrado.
+- Anuncios (Dashboard > Gestionar anuncios): vista previa en vivo, plantillas (mantenimiento, corte, aviso...),
+  vigencia con fecha y hora, destinatarios (todos, por rol o por area), anuncio "fijo" (no se puede cerrar),
+  avisar por notificacion al publicar, editar, duplicar, ocultar y eliminar, filtros por estado y cuantos lo cerraron.
+  Cada persona puede cerrar un anuncio y no le vuelve a aparecer. Se corrigio que antes los avisos de tipo
+  info/mantenimiento salian sin mensaje y que "Nuevo permiso" no guardaba.
+- Software (menu Inventario > Software): control de los programas instalados en TODOS los equipos (laptops, PC,
+  celulares, servidores...). Catalogo de programas (categoria, autorizado / en evaluacion / prohibido, software
+  estandar), licencias (tipo, numero de puestos, vencimiento, costo, proveedor) e instalaciones por equipo con
+  version, fecha y licencia usada, y su historial de retiros. Pestanas: Resumen (cobertura, observaciones para
+  auditoria, cumplimiento por programa), Instalaciones, Por equipo (con "Confirmar inventario"), Catalogo y Licencias.
+  * Al REGISTRAR un equipo (laptop, PC, servidor...) aparece la seccion "Software instalado" con el software estandar
+    ya puesto; si es de computo y no se indica ninguno el sistema pregunta antes de guardar.
+  * La ficha del equipo muestra su software y tiene el boton "Software" para agregar o retirar programas.
+  * Instalar en varios equipos a la vez y "Carga masiva" pegando o subiendo lineas CODIGO;Programa;Version;Licencia.
+  * "Informe para gerencia" (pantalla imprimible, sin claves) y descargas en CSV / Excel para auditorias.
+  * Observaciones automaticas: programas prohibidos, instalaciones sin licencia o con licencia vencida, programas
+    con mas instalaciones que puestos, licencias por vencer, equipos de computo sin software e inventarios sin
+    confirmar en 180 dias. Las claves de licencia solo las ve quien tiene el permiso "software.gestionar".
+  * Permisos nuevos: software.ver, software.registrar y software.gestionar. Las personas que ya estaban con
+    la sesion abierta deben VOLVER A INICIAR SESION para ver el menu. Para que Gerencia vea el modulo, asigne
+    "software.ver" a su rol en Configuracion > Permisos.
+  * Las licencias que ya existian en la ficha de cada equipo se migran solas al nuevo modulo.
+  * La lista inicial de programas y cuales son "estandar" es solo una propuesta: edite el Catalogo.
+
+== 12/10/2026 - Dashboard, Reportes y Guias ==
+- Dashboard: nuevo panel con accesos rapidos, tarjetas por area (mesa de ayuda, inventario, operacion, software, personal),
+  "Requiere atencion" con las observaciones urgentes (rojo) y las que conviene revisar (amarillo) -cada una lleva al modulo-,
+  "Para ti", 4 graficos de los ultimos 6 meses y actividad reciente de tickets. Cada persona ve solo lo que su rol permite
+  (el valor del inventario solo con "reportes.ver"). Se actualiza solo cada minuto y tiene boton "Refrescar".
+- Reportes: ahora tiene 7 pestanas (Resumen, Tickets, Mantenimiento, Inventario, Software, Asignaciones y actas, Personal)
+  con periodo rapido (este mes, 30 dias, 3 y 6 meses, este anio) o rango propio, comparacion contra el periodo anterior,
+  graficos, tablas de detalle con buscador, boton "Informe" (pagina para imprimir / guardar como PDF con logo y firmas) y
+  "Descargar" en Excel o CSV. El permiso "reportes.ver_area" ahora funciona: muestra solo tickets y personal de su area.
+  Las descargas e impresiones quedan registradas en Auditoria.
+- Guias: ahora es un centro de ayuda con buscador (ignora tildes), filtros por categoria, 17 guias paso a paso de todos los
+  modulos, preguntas frecuentes y glosario. Cada guia se puede imprimir; "Ir al modulo" abre la pantalla correspondiente.
+  Solo se muestran las guias de los modulos a los que la persona tiene acceso. Las 3 guias tecnicas anteriores (rastreo,
+  etiquetas, carnets) siguen disponibles en la categoria "Guias tecnicas".
+- No hay script de base de datos: copie los archivos sobre la instalacion y presione Ctrl + F5 en el navegador.
+- En instalaciones nuevas el catalogo de software inicial ahora se carga solo (antes podia quedar vacio).
+
+== 12/10/2026 - Interfaz mas dinamica y animada ==
+- Todas las pantallas ganan movimiento sin cambiar su funcionamiento (archivos nuevos: assets/css/sigti-fx.css y
+  assets/js/core/fx.js; index.php los carga):
+  * Al abrir una pantalla, sus tarjetas y bloques suben en cascada; el menu lateral aparece en cascada al ingresar y
+    la opcion activa se ilumina.
+  * Las cifras de las tarjetas (Dashboard, Reportes, Tickets, Software, etc.) cuentan hasta su valor.
+  * Botones con onda al pulsar y elevacion al pasar el mouse; tarjetas que se elevan; iconos que reaccionan.
+  * Tablas: las filas entran suavemente y la fila bajo el cursor se marca; pestanas con subrayado animado.
+  * Ventanas (modales) con efecto de resorte, avisos con barra de tiempo, menus desplegables suaves.
+  * La carga ahora se ve como una barra animada arriba (antes un circulo sobre toda la pantalla).
+  * Lo urgente se mueve solo: tarjetas rojas del Dashboard, observaciones rojas y la campana con avisos nuevos.
+  * Inicio de sesion con fondo en movimiento y entrada suave. Los graficos se dibujan con animacion.
+- Si el equipo va lento: menu de la foto > "Animaciones: activadas" para apagarlas (se recuerda en ese navegador).
+  Si el sistema operativo tiene activado "reducir movimiento", arrancan apagadas.
+- Ademas: las tablas anchas ahora se desplazan dentro del contenido en lugar de pasar por debajo del menu lateral.
+- No hay script de base de datos: copie los archivos y presione Ctrl + F5.
+
+== 12/10/2026 - Auditoria de seguridad y calidad (previa a pruebas) ==
+- Seguridad:
+  * Las tablas de todas las pantallas ahora escapan el texto (evita que un nombre o descripcion con codigo se ejecute
+    en el navegador de otro usuario). Tambien en titulos de avisos (proyectos, roles, seguimiento) y en el chat.
+  * Las estadisticas de equipos, mantenimiento y tickets ahora exigen el permiso de ver del modulo.
+  * El motor de preventivos (boton "Ejecutar ahora") ahora exige el token CSRF.
+  * El logo de la empresa se valida por contenido (debe ser realmente PNG o JPG).
+  * La carpeta docs/ queda bloqueada para el navegador (docs/.htaccess).
+  * Opcional para produccion: en config/config.php agregue  define('APP_DEBUG', false);  y los errores internos ya no
+    mostraran mensajes ni rutas al usuario (solo una referencia; el detalle queda en el log de PHP).
+- Limpieza: se eliminan 3 archivos que ya no se usaban (api/equipos/lista.php, api/dashboard/resumen.php,
+  api/actas/asignados.php). Borrelos del servidor si existen.
+- Instalacion nueva: db/migraciones/2026-10-12-tablas-base.sql crea 4 tablas que db/sigti.sql no trae (tipos de acta y sus
+  campos, plantillas de etiquetas, ubicaciones fisicas). En una base que ya las tiene no hace nada.
+- No hay otro script de base de datos: copie los archivos y presione Ctrl + F5.
+
+== 12/10/2026 - Licencias: fecha de activacion y duracion ==
+- Software > Licencias > Nueva / Editar licencia: junto a la clave ahora hay "Fecha de activacion" y "Duracion" (numero +
+  dias / meses / anios, con atajos 1 mes, 3 meses, 6 meses, 1 anio, 2 y 3 anios). El vencimiento se calcula solo y se ve al
+  instante: activada el 15/01/2026 por 12 meses vence el 15/01/2027; si el dia no existe (31/01 + 1 mes) toma el ultimo
+  dia del mes (28/02). Con duracion, el campo Vencimiento queda bloqueado; sin duracion se puede escribir a mano como antes.
+- La lista de licencias muestra "Activada el ... · 12 meses" bajo el vencimiento. Las alertas "por vencer / vencidas", el
+  Dashboard y los Reportes usan ese vencimiento sin cambios. Las licencias antiguas siguen igual.
+- Las 3 columnas nuevas se crean solas al abrir Software (script opcional: db/migraciones/2026-10-12-licencias-activacion.sql).
+- Archivos: core/Software.php, core/Guias.php, api/software/licencias.php, assets/js/app/software.js.
+
+== 12/10/2026 - Licencias: precio unitario y costo total automatico ==
+- Nueva / Editar licencia: ahora hay "Precio unitario (S/)" (lo que cuesta cada puesto). El "Costo total" se calcula solo
+  (precio unitario x puestos) y se recalcula si cambia el numero de puestos o el precio. Con precio unitario el total queda
+  bloqueado; sin precio unitario se escribe el total a mano, como antes. Precio 0 es valido (software gratuito).
+- La lista de licencias muestra el total y debajo "S/ x c/u". El Dashboard, los Reportes y el informe usan el costo total
+  sin cambios. La columna nueva se crea sola al abrir Software (script opcional en db/migraciones/2026-10-12-licencias-activacion.sql).
+- Archivos: core/Software.php, api/software/licencias.php, assets/js/app/software.js.
+
+== 12/10/2026 - Nuevo modulo: Capacitaciones (para cualquier area) ==
+- Menu > Capacitaciones. Cualquier persona, de cualquier area, puede pedir una capacitacion a Sistemas (tema de la lista u
+  "Otro", que necesitan aprender, participantes, modalidad, fecha deseada, urgente) y ve en que va su solicitud.
+- Estados que ve quien solicita (con una linea de pasos y una explicacion): Enviada > En revision > Programada > Realizada;
+  o Rechazada (con el motivo) / Cancelada. Cada cambio llega a su campana de avisos. Al terminar puede calificarla (1 a 5).
+  Mientras no este programada, la persona puede cancelarla.
+- Sistemas: pestana Solicitudes (tarjetas Nuevas / En revision / Programadas / Por cerrar / Realizadas, filtros por estado,
+  area y texto), Agenda de capacitaciones programadas, y Temas (agregar, editar, desactivar, eliminar si no se uso).
+  Acciones: Empezar a revisar, Programar / Reprogramar (fecha, hora, duracion, lugar o enlace, capacitador), Rechazar (motivo
+  obligatorio), Marcar realizada (asistentes y resultado).
+- Permisos nuevos (se crean solos al iniciar sesion): capacitaciones.solicitar (pedir y ver las propias), .ver_area (ver las
+  de su area, jefaturas), .ver (ver todas) y .gestionar (revisar, programar, cerrar y administrar temas). Quien ya tenia
+  tickets.crear / tickets.ver_area / tickets.ver / tickets.asignar recibe el equivalente automaticamente; ajuste en Permisos > Matriz.
+- Dashboard: aviso de solicitudes sin revisar / por calificar y acceso rapido "Pedir capacitacion". Guias: nueva guia.
+  Auditoria: todos los cambios quedan registrados en el modulo "capacitaciones".
+- Las 3 tablas se crean solas al abrir Capacitaciones (script opcional: db/migraciones/2026-10-12-capacitaciones.sql).
+- Archivos: core/Capacitaciones.php, core/Roles.php, core/Auditoria.php, core/Dashboard.php, core/Guias.php,
+  api/capacitaciones/*, views/capacitaciones/lista.php, assets/js/app/capacitaciones.js, assets/js/core/menu.js,
+  assets/js/core/router.js, index.php.
+
+== 13/10/2026 - Rastreo: posicion aproximada (equipos sin GPS) ==
+- Problema: una laptop sin GPS (ej. Lenovo LOQ) informa una posicion estimada por Wi-Fi/IP con margen de varios km (ej. +-11346 m)
+  y el sistema la mostraba como exacta, en otra direccion (ej. "Cerca de Barranca" en vez de Av. Javier Prado Este).
+- Ahora: si el margen supera 1500 m la posicion se marca como "Aproximada" (insignia, circulo del margen en el mapa y aviso en
+  el detalle con la IP publica y la red local para registrar la sede). Si la red del equipo esta registrada en
+  Seguimiento > Rastreo > "Sedes y redes" con coordenadas, se usa la sede (ubicacion exacta de la oficina).
+- Que hacer en cada oficina: Sedes y redes > Nueva sede: nombre, IP publica (la que ve el equipo, ej. 161.132.69.241) y/o red local
+  (ej. 192.168.1.), direccion y coordenadas (copiadas de Google Maps, clic derecho en el punto).
+- Los reportes anteriores con margen grande tambien se ven como "Aproximada".
+- Archivos: api/rastreo/checkin.php, core/Rastreo.php, assets/js/app/seguimiento.js, views/rastreo/guia.php.
+
+== 13/10/2026 - Actas con archivo firmado, facturas de licencias y chat emergente ==
+1) ACTAS: subir el acta firmada y verla
+- En Actas > lista, cada acta tiene el boton de la flecha (subir). Se adjunta un PDF o una foto (JPG, PNG o WEBP, maximo 10 MB)
+  y, si el acta estaba pendiente, queda marcada como "Firmada" (casilla desmarcable). Se puede reemplazar o quitar el archivo.
+- Con el clip "Ver archivo" (o el boton de ver) se abre en una ventana emergente, con "Abrir en otra pestana" y "Descargar".
+- El sistema comprueba que el archivo sea realmente un PDF o una imagen (no basta con la extension). Queda en Auditoria.
+2) SOFTWARE > LICENCIAS: factura adjunta
+- Al registrar o editar una licencia hay un campo "Factura o comprobante (PDF o imagen)". En la lista aparece "Ver factura"
+  que abre el documento en la ventana emergente. Para quitarla: editar la licencia y marcar "Quitar". Al eliminar la licencia,
+  se borra tambien su archivo.
+3) CHAT EMERGENTE
+- El globo azul de la esquina abre ahora un panel de chat sobre cualquier pantalla (ya no hay que ir al modulo Chat):
+  lista de conversaciones con no leidos y buscador, escribir y recibir en vivo, adjuntar archivos o imagenes y boton "Nuevo"
+  para escribir a una persona o a un area. "Abrir el chat completo" (icono de expandir) lleva al modulo para grupos y reuniones.
+  En el celular el panel ocupa toda la pantalla. Esc o la X lo cierran. Dentro del modulo Chat el globo se oculta.
+- Archivos guardados en storage/actas-firmadas y storage/facturas-licencias (se crean solas; solo se entregan con sesion y permiso).
+- Las columnas nuevas se crean solas al abrir Actas / Licencias. Si subir archivos grandes falla en XAMPP, revisar en php.ini
+  upload_max_filesize y post_max_size (>= 12M) y reiniciar Apache.
+- Archivos: core/Documentos.php (nuevo), core/Actas.php, core/Software.php, core/Guias.php, api/actas/archivo.php (nuevo),
+  api/actas/listar.php, api/software/factura.php (nuevo), api/software/licencias.php, assets/js/core/visor.js (nuevo),
+  assets/js/core/chat.js, assets/js/app/actas.js, assets/js/app/software.js, assets/css/sigti.css, views/actas/lista.php, index.php.
+
+== 13/10/2026 - Ingreso con foto, menu dinamico y firma del desarrollador ==
+1) INGRESO: al escribir el usuario (3 letras o mas) aparece su foto; si no tiene foto, un circulo con su inicial. El sistema solo
+   entrega la foto (nunca nombre ni datos) y responde igual si el usuario no existe; limite de 40 consultas por minuto por equipo.
+   Se recuerda el ultimo usuario que ingreso en ese navegador.
+2) MENU LATERAL DINAMICO
+- Secciones plegables (se recuerda cuales), buscador (clic, tecla "/" o Ctrl+K; Enter abre el primer resultado, Esc limpia),
+  favoritos con estrella (por usuario), modo compacto de solo iconos (boton de flechas, abajo) y menu deslizable en el celular.
+- Insignias con los pendientes de cada modulo (rojo = urgente, ambar = por atender, azul = informativo, p. ej. mensajes sin leer
+  del chat). Se calculan segun los permisos de cada persona (mismos datos del Dashboard) y se actualizan solas cada 90 segundos.
+3) DESARROLLADOR: Ing. Alejandro Aldo Meneses Aliaga - codigo de autor SIGTI-DEV-AMA-2026.
+- Aparece en el pie del ingreso, en "Acerca de SIGTI" (menu de la foto, con version y sello de autoria), en la consola del
+  navegador, en el codigo fuente de la pagina y como comentario @autor al inicio de cada archivo PHP, JS y CSS.
+- Para cambiar nombre o codigo: editar las constantes de core/Autor.php.
+- Archivos nuevos: core/Autor.php, assets/js/core/autor.js, api/auth/foto-login.php, api/menu/insignias.php.
+  Modificados: index.php, assets/js/core/{app,menu,chat}.js, assets/css/sigti.css, core/Guias.php, y la cabecera de autoria
+  en todos los archivos (el paquete trae el codigo completo; las carpetas config, storage y docs no se tocan).
+
+== 13/10/2026 - Autoria con ORCID ==
+- ORCID del autor: 0000-0003-1788-1978 (https://orcid.org/0000-0003-1788-1978), ligado al nombre y al codigo de autor SIGTI-DEV-AMA-2026.
+- Se muestra en la pantalla de ingreso, en "Acerca de SIGTI", en la consola del navegador, en el codigo fuente de la pagina
+  (meta citation_author_orcid, link rel=author y datos estructurados schema.org) y en la primera linea de cada archivo PHP/JS/CSS.
+- Archivos nuevos en la raiz del proyecto (para GitHub): CITATION.cff (boton "Cite this repository"), codemeta.json, LICENSE
+  (todos los derechos reservados) y AUTORIA.md (declaracion de autoria y pasos para reforzarla: commits firmados, Zenodo/DOI,
+  obra en el perfil ORCID, registro en INDECOPI). Si el repositorio ya tiene un LICENSE propio, conservar el que prefiera.
+- El ORCID se cambia en un solo lugar: core/Autor.php (constante ORCID).
+
+== 13/10/2026 - Sistema por LICENCIAS y adaptable a cada rubro ==
+SIGTI ahora se entrega UNA INSTALACION POR EMPRESA y funciona con una licencia (validada sin internet), y se adapta al rubro.
+1) LICENCIA (Administracion > Licencia y rubro): cada instalacion muestra su "codigo de instalacion" (INST-XXXX-XXXX-XXXX). El proveedor emite la
+   licencia (texto SIGTI1...) para ese codigo + el RUC de la empresa + la fecha de vencimiento; se pega y se activa. Al activar se cargan el nombre,
+   las siglas y el RUC de la empresa (actas, informes, carnets) y los codigos de acta toman las siglas (p. ej. ANDINA-TI-FOR-003).
+   - Prueba: 15 dias desde el primer uso, todo habilitado.  - Aviso: desde 30 dias antes de vencer (banner bajo la barra superior).
+   - Gracia: 15 dias tras vencer, sigue funcionando con aviso rojo.  - Despues (o sin licencia / licencia no valida / fecha del equipo alterada):
+     SOLO LECTURA: se entra, se consulta, se busca y se exporta; no se registra ni modifica. Los datos nunca se borran.
+   - La licencia queda atada al RUC y a la instalacion (no sirve en otra copia). Renovar = pegar la licencia nueva.
+2) RUBRO: se elige entre General, Construccion, Educacion, Salud, Comercio, Industria, Logistica y Servicios. Agrega (sin borrar nada) categorias de
+   tickets, tipos de equipo y areas del giro, y cambia la palabra "obra" por sede / tienda / planta / base / sucursal en pantallas y menus.
+3) MODULOS: se pueden apagar los que la empresa no use (Proyectos, Capacitaciones, Mantenimiento, Software, Seguimiento, Carnets, Etiquetas, Chat,
+   RR.HH. ampliado); desaparecen del menu, del Dashboard y de la API. Los datos se conservan.
+4) IMPORTANTE PARA LUMAT (instalacion existente): tras actualizar corren 15 dias de prueba. Pida su licencia al proveedor y activela con el codigo de
+   instalacion que ve en Licencia y rubro; el RUC debe ser el mismo que tiene en Actas > Encabezado. Si ya tenia los codigos LUMAT-TI-FOR-00X en
+   las actas, se conservan tal cual.
+5) Sin nombre de empresa fijo en el codigo: actas, informes, carnets y guias usan el nombre/RUC/siglas de la licencia.
+- Archivos nuevos: core/{Licencia,Empresa,Rubros}.php, api/licencia/*, views/licencia/principal.php, assets/js/core/sistema.js,
+  assets/js/app/licencia.js, LICENCIAMIENTO.md. Modificados: core/bootstrap.php (control de licencia en cada peticion), Dashboard, MotorDiario,
+  actas/informes/carnets, menu, index.php, login/perfil. La tabla de la licencia (sistema_licencia) se crea sola.
+- El proveedor emite licencias con el "Kit del proveedor" (zip aparte, NO se entrega a clientes).
+
+== Limpieza ==
+- Opcional: ejecute limpiar-carpeta-en-uso.bat DENTRO de su carpeta Plataforma-Servicio-TI para borrar 59 archivos que ya no se usan
+  (7 endpoints sin pantalla, un script duplicado y los documentos internos de auditoria de docs/). No toca storage, config ni la base de datos.
+
+== 13/10/2026 - Software: motivo al retirar ==
+- Retirar un programa de un equipo: ahora el cuadro permite escribir (antes la ventana de la ficha del equipo le quitaba el foco y no dejaba teclear).
+  El campo Motivo es una lista (Ya no se usa, Licencia vencida o sin puestos, Reemplazado por otro programa, Programa no autorizado,
+  Equipo reasignado o reformateado, Instalacion por error, Otro) mas un detalle libre; con «Otro» el detalle es obligatorio.
+- La correccion de foco (assets/js/core/app.js) tambien arregla otros cuadros con campo de texto que se abren sobre una ventana
+  (rechazar o cancelar capacitaciones, cancelar asignaciones, trasladar equipos, etc.).
+
+== 13/10/2026 - Nuevo modulo: RR.HH. ampliado (Contratos, Vacaciones, Asistencia, Planillas) ==
+- Menu > RR.HH. (nueva seccion con 4 pantallas). Es GESTION INTERNA: ayuda a llevar el control dentro de la empresa, pero
+  NO reemplaza ni tiene validez ante SUNAT, PLAME ni ningun tramite laboral/tributario oficial; los datos de planilla son
+  para uso interno (boleta informativa, no boleta oficial).
+  1) CONTRATOS: tipo (indeterminado, plazo fijo, practicante, locacion de servicios, part time), puesto, salario, fecha de
+     inicio y fin. Estado automatico: Vigente (verde), Vence en N dia(s) (ambar, desde 30 dias antes), Vencido (rojo),
+     Renovado / Finalizado (gris). Botones Renovar (cierra el actual y abre uno nuevo) y Finalizar (motivo). No permite
+     2 contratos vigentes a la vez para la misma persona. Tarjetas de resumen (vigentes, por vencer, vencidos).
+  2) VACACIONES: calculo automatico de dias ganados segun el tiempo trabajado desde la fecha de ingreso (2.5 dias por mes,
+     redondeado hacia abajo) menos los ya usados y los que estan reservados en solicitudes pendientes o aprobadas; el saldo
+     disponible se ve al pedir. Solicitar, Aprobar / Rechazar (con motivo) y Cancelar; no deja traslapar fechas con otra
+     solicitud de la misma persona. Puede forzarse una solicitud por encima del saldo si el area lo autoriza.
+  3) ASISTENCIA: marcado diario por persona (normal, tardanza, falta, falta justificada, permiso), con hora de entrada y
+     observacion opcional; filtro por area. No se puede marcar un dia futuro. Resumen del dia con cuantos faltan por marcar.
+  4) PLANILLAS: catalogo de conceptos (ingresos y descuentos; cada uno fijo en soles o porcentaje del sueldo base) editable
+     en Configuracion de conceptos. "Generar periodo" calcula el neto de cada persona activa con contrato vigente aplicando
+     los conceptos activos; queda en Borrador (se puede volver a generar) y al Cerrar el periodo ya no se recalcula (se
+     puede Reabrir si hace falta corregir algo). Boleta imprimible por persona y periodo (views/rrhh/boleta.php, uso
+     interno, no es un documento tributario).
+- Se encienden o apagan por empresa igual que los demas modulos: Administracion > Licencia y rubro > Modulos > "RR.HH.
+  ampliado". Al apagarlo desaparece del menu, del Dashboard y bloquea su API y sus pantallas (los datos no se borran).
+- Dashboard: avisos de contratos vencidos (rojo), contratos por vencer y vacaciones pendientes de aprobar (ambar), y acceso
+  rapido a RR.HH. Guias: nueva guia "RR.HH. ampliado" (categoria Personas) con los 4 submodulos explicados paso a paso.
+- Permisos nuevos (se crean solos al iniciar sesion): rrhh.ver (ver las 4 pantallas) y rrhh.gestionar (registrar, aprobar,
+  generar y cerrar planillas); ambos se heredan automaticamente a quien ya tenia personal.ver / personal.editar. Ajuste
+  fino en Configuracion > Permisos > Matriz por rol si una empresa prefiere repartirlo distinto.
+- No hace falta ejecutar nada en la base de datos: las 6 tablas nuevas (personal_contratos, rrhh_vacaciones, rrhh_asistencia,
+  rrhh_conceptos, rrhh_planillas, rrhh_planilla_detalle) y los 5 conceptos de ejemplo se crean solos la primera vez que se
+  usa cada pantalla.
+- Archivos nuevos: core/{Contratos,Vacaciones,Asistencia,Planillas}.php, api/{contratos,vacaciones,asistencia,planillas}/*,
+  views/rrhh/{contratos,vacaciones,asistencia,planillas,boleta}.php, assets/js/app/{contratos,vacaciones,asistencia,
+  planillas}.js. Modificados: core/{Licencia,Roles,Dashboard,Guias}.php, assets/js/core/{sistema,menu,router}.js, index.php.
+
+== 14/10/2026 - RR.HH. ampliado: nuevo submodulo "Requerimiento de personal" ==
+- Menu > RR.HH. > Requerimiento de personal (5ta pantalla del modulo). Cualquier area (residente de obra, analista,
+  practicante, etc.) pide personal a Sistemas / RR.HH., indicando el puesto, la cantidad, un tipo de contrato sugerido
+  (opcional), la justificacion y el PLAZO para tener a la persona contratada y firmando sus documentos.
+- Si la vacante necesita equipos (laptop, PC de escritorio, modem/router, celular, impresora u otro, con detalle libre)
+  o EPP (casco, guantes, lentes, chaleco, zapatos de seguridad, protector auditivo, mascarilla, arnes - catalogo editable
+  en la pestaña "Catalogo EPP"), se marcan las casillas correspondientes antes de enviar.
+- UNA VEZ ENVIADO, el area que lo pidio YA NO puede editarlo ni cancelarlo: solo puede pedir un cambio a Sistemas /
+  RR.HH. por el chat interno o creando un ticket (boton "Pedir un cambio" en el detalle). Sistemas / RR.HH. es quien
+  toma el requerimiento, corrige los datos si hace falta, marca cada equipo o EPP como entregado, y lo marca "Cubierto"
+  cuando la vacante se llena o "Cancelado" con motivo. No hay un paso de aprobacion adicional: el bloqueo de edicion
+  mas el canal de chat/ticket es todo el control.
+- Se enciende o apaga junto con el resto de RR.HH. ampliado (Administracion > Licencia y rubro > Modulos). Dashboard:
+  avisos de requerimientos atrasados (paso el plazo, rojo) y por atender (ambar), y acceso rapido "Pedir personal"
+  para quien solo tiene el permiso de solicitar. Guias: la guia de RR.HH. ampliado ahora incluye este submodulo.
+- Permisos nuevos (se crean solos al iniciar sesion, bajo el mismo modulo "rrhh"): rrhh.solicitar (pedir personal de su
+  area y ver las propias; lo recibe automaticamente quien ya tenia tickets.crear) y rrhh.ver_area (ver ademas los
+  requerimientos de su area; lo recibe quien ya tenia tickets.ver_area). rrhh.ver y rrhh.gestionar (ya existentes)
+  tambien aplican aqui: ven o gestionan TODOS los requerimientos, de cualquier area.
+- No hace falta ejecutar nada en la base de datos: las tablas nuevas (rrhh_requerimientos, rrhh_requerimiento_equipos,
+  rrhh_requerimiento_epp, rrhh_requerimiento_historial, rrhh_epp_catalogo) y los 8 EPP de ejemplo se crean solos la
+  primera vez que se usa la pantalla.
+- Archivos nuevos: core/Requerimientos.php, api/requerimientos/{solicitudes,gestionar,epp,resumen}.php,
+  views/rrhh/requerimientos.php, assets/js/app/requerimientos.js. Modificados: core/{Roles,Licencia,Dashboard,Guias}.php,
+  assets/js/core/{sistema,menu,router}.js, index.php.
+
+== 14/10/2026 - Requerimiento de personal: catalogo de puestos con requisitos, equipos de TI y salario ==
+- Puesto solicitado con catalogo AUTONOMO (no hace falta tocar codigo para agregar puestos): al escribir un puesto que
+  ya esta "Activo" en el catalogo, el formulario muestra debajo una "Ficha del puesto" con sus requisitos (Educacion,
+  Formacion, Experiencia, u otra categoria libre que se le haya puesto) y sugiere el tipo de contrato y el salario. Si
+  el puesto escrito es nuevo, el requerimiento se registra igual y el puesto queda propuesto en el catalogo como
+  "Pendiente de validar" para que Sistemas / RR.HH. lo complete.
+- Nueva pestaña "Puestos y requisitos": quien gestiona RR.HH. valida los puestos propuestos (o crea uno directo, ya
+  "Activo"), les define el tipo de contrato sugerido, el salario referencial y los requisitos -categoria y detalle
+  libres, tantos como haga falta (agregar, editar y quitar cualquiera, todo en un solo guardado)-; tambien puede
+  inactivar un puesto o eliminarlo del catalogo (solo si ningun requerimiento lo uso todavia). Cualquiera con permiso
+  de solicitar puede "Proponer puesto" con solo el nombre.
+- Los equipos de TI (laptop, PC de escritorio, modem/router, celular, impresora, otro) ahora tambien son un catalogo
+  editable (nueva pestaña "Equipos de TI", igual que el de EPP) en vez de una lista fija: se pueden agregar, renombrar,
+  activar o desactivar sin tocar codigo.
+- Nuevo campo "Salario referencial" (minimo y maximo, en soles, opcional) al solicitar personal; lo ve cualquiera que
+  pueda ver el requerimiento (el area solicitante incluida) y Sistemas / RR.HH. lo puede corregir al editar.
+- Dashboard: nuevo aviso (ambar) de puestos nuevos propuestos por validar en el catalogo.
+- No hace falta ejecutar nada en la base de datos: las tablas nuevas (rrhh_puesto_catalogo, rrhh_puesto_requisitos,
+  rrhh_equipo_catalogo) y las columnas nuevas de rrhh_requerimientos (puesto_id, salario_min, salario_max) y de
+  rrhh_requerimiento_equipos (equipo_id, nombre) se crean o se agregan solas la primera vez que se usa la pantalla,
+  incluso en instalaciones que ya tenian el submodulo de Requerimiento de personal.
+- Archivos nuevos: api/requerimientos/{puestos,equipos_catalogo}.php. Modificados: core/{Requerimientos,Dashboard,
+  Guias}.php, api/requerimientos/{solicitudes,gestionar}.php, views/rrhh/requerimientos.php, assets/js/app/requerimientos.js.
+  No se agrego ningun permiso ni pantalla de menu nueva (usa los mismos rrhh.solicitar / rrhh.gestionar de siempre).
+
+== 14/10/2026 - Requerimiento de personal: permiso de eliminar, biblioteca de requisitos y edicion de equipos/EPP ==
+- Nuevo permiso "rrhh.eliminar" (separado de rrhh.gestionar): solo quien lo tiene puede BORRAR (no solo desactivar) un
+  puesto, un equipo de TI o un requisito del catalogo; crear, editar, validar y activar/desactivar sigue bajo
+  rrhh.gestionar. Quien ya tenia rrhh.gestionar recibe rrhh.eliminar automaticamente al abrir Configuracion > Permisos
+  (se puede quitar despues en Matriz por rol si una empresa prefiere separar los dos permisos entre personas distintas).
+- Nueva "Biblioteca de requisitos" (pestaña dentro de Puestos y requisitos): catalogo reutilizable de frases de
+  requisito (categoria + detalle), compartido entre todos los puestos. Al agregar un requisito a un puesto se elige de
+  la biblioteca con un desplegable (autocompleta categoria y detalle) o se escribe uno nuevo: si la frase no existia se
+  agrega sola a la biblioteca para reutilizarla despues; si ya existia (mismo texto, sin importar mayusculas) se
+  reutiliza el mismo registro en vez de duplicarlo. Eliminar un requisito de la biblioteca exige rrhh.eliminar y se
+  bloquea si algun puesto todavia lo usa.
+- Sistemas / RR.HH. ahora puede, al EDITAR un requerimiento que ya fue enviado, tambien agregar o quitar los equipos de
+  TI y el EPP solicitados (antes solo se podia editar al crearlo). Los equipos/EPP que ya estaban marcados como
+  "entregado" conservan esa marca si siguen en la lista; los que se quitan se eliminan y los nuevos entran sin entregar.
+- No hace falta ejecutar nada en la base de datos: la tabla nueva (rrhh_requisito_catalogo) y la columna nueva de
+  rrhh_puesto_requisitos (requisito_id) se crean o se agregan solas la primera vez que se usa la pantalla.
+- Archivos nuevos: api/requerimientos/requisitos_catalogo.php. Modificados: core/{Roles,Requerimientos,Guias}.php,
+  api/requerimientos/{puestos,equipos_catalogo,gestionar}.php, views/rrhh/requerimientos.php,
+  assets/js/app/requerimientos.js.
+
+== 14/10/2026 - Mantenimiento: mas metricas, buscador y exportar; emojis en el chat flotante ==
+1) MANTENIMIENTO > PANEL (pestaña del dashboard del modulo): se agregan mas metricas debajo de las que ya habia:
+   tiempo promedio de atencion (general y por tipo de mantenimiento), top de proveedores (cantidad atendida, costo
+   promedio y dias promedio), top de tecnicos internos (cantidad y dias promedio) y equipos con fallas recurrentes
+   (2 o mas mantenimientos en los ultimos 12 meses, para detectar equipos problematicos).
+2) MANTENIMIENTO > MANTENIMIENTOS: nuevo buscador de texto libre (busca por codigo, equipo, proveedor, tecnico,
+   ticket o diagnostico) y nuevo boton "Exportar" (CSV o Excel) que descarga la lista con los mismos filtros
+   aplicados en pantalla, igual que ya existia en Inventario de equipos.
+3) MANTENIMIENTO > PREVENTIVOS PROGRAMADOS: nuevo buscador (por equipo, marca, tipo o responsable) y nuevo filtro
+   por situacion (vencida, por vencer, en curso, al dia, pausada); antes esta pestaña no se podia filtrar.
+4) CHAT FLOTANTE (el globo azul que abre el chat sobre cualquier pantalla): ahora tiene el mismo selector de emojis
+   que ya tenia el chat completo (boton de la carita junto al campo de escribir, con pestañas Caritas/Gestos/
+   Trabajo/Animo); antes el chat flotante no tenia forma de insertar emojis.
+- No hace falta ejecutar nada en la base de datos ni reinstalar nada: son pantallas y consultas nuevas sobre datos
+  que ya existian. En el navegador pulse Ctrl+F5 para recargar los archivos nuevos.
+- Archivos nuevos: api/mantenimiento/exportar.php. Modificados: api/mantenimiento/stats.php,
+  views/mantenimiento/lista.php, assets/js/app/mantenimiento.js, assets/js/core/chat.js, assets/css/sigti.css.
+
+== 14/10/2026 - Requerimiento de personal: ahora se puede eliminar un requerimiento ya cerrado ==
+1) RR.HH. > REQUERIMIENTOS DE PERSONAL: antes, un requerimiento ya "Cubierto" o "Cancelado" se quedaba para siempre
+   en la lista (solo se podia inactivar el puesto, nunca borrar el requerimiento en si). Ahora aparece un boton
+   "Eliminar" (en la lista y en el detalle) para los requerimientos que ya estan en estado "Cubierto" o "Cancelado".
+2) Un requerimiento "Pendiente" o "En proceso" NO se puede eliminar: primero hay que cubrirlo o cancelarlo. Al
+   eliminar se borra el requerimiento junto con sus equipos de TI, EPP e historial asociados (borrado definitivo,
+   pide confirmacion antes de hacerlo).
+3) Solo puede eliminar quien tiene el permiso "rrhh.eliminar" (el mismo permiso separado que ya se usaba para borrar
+   del catalogo de puestos, equipos de TI y la biblioteca de requisitos) -es decir, el area de Sistemas-; quien solo
+   tiene "rrhh.gestionar" puede tomar, editar, cubrir y cancelar requerimientos pero no eliminarlos.
+- No hace falta ejecutar nada en la base de datos ni reinstalar nada. En el navegador pulse Ctrl+F5 para recargar
+  los archivos nuevos.
+- Archivos modificados: core/{Requerimientos,Roles,Guias}.php, api/requerimientos/{gestionar,solicitudes}.php,
+  assets/js/app/requerimientos.js.
+
+== 14/10/2026 - Chat: stickers, notas de voz y se corrige el panel de emojis en el chat flotante ==
+1) CHAT FLOTANTE: se corrige que el panel de emojis se viera pegado arriba, lejos del campo de
+   escribir (aparecia junto al titulo de la conversacion en vez de sobre el teclado). Ahora se abre
+   justo encima de donde se escribe, igual que en el chat completo.
+2) CHAT (completo y flotante): nuevo boton de stickers (junto al de emojis). Cualquiera puede enviar
+   un sticker del catalogo (sin texto, como una imagen). Solo el area de Sistemas puede agregar
+   stickers nuevos (sube una imagen jpg/png/gif/webp, hasta 2 MB) y quitarlos del catalogo; un sticker
+   quitado ya no se puede volver a enviar, pero los mensajes que ya lo enviaron lo siguen mostrando
+   (no se borra el archivo del disco).
+3) CHAT (completo y flotante): nuevo boton de microfono para grabar y enviar una nota de voz (hasta
+   2 minutos; se envia sola al llegar al tope). Se guarda y se reproduce como cualquier adjunto, con
+   los controles de audio del navegador. IMPORTANTE: grabar audio desde el navegador solo funciona
+   con el sitio en HTTPS o en localhost; si el sistema se usa por http:// en la red local, Chrome/Edge
+   bloquean el microfono y el boton avisa que no se puede grabar (es una restriccion del navegador,
+   no del sistema).
+- No hace falta ejecutar nada en la base de datos ni reinstalar nada: la tabla nueva (chat_stickers)
+  y la columna nueva de chat_mensajes (sticker_id) se crean solas la primera vez que se abre el Chat.
+  En el navegador pulse Ctrl+F5 para recargar los archivos nuevos.
+- Archivos nuevos: api/chat/stickers.php, api/chat/sticker_archivo.php. Modificados:
+  core/{Chat,Guias}.php, api/chat/{mensajes,archivo}.php, views/chat/principal.php,
+  assets/js/app/chat.js, assets/js/core/chat.js, assets/css/sigti.css.
+
+== 14/10/2026 - Anuncios: ahora se pueden avisar tambien por correo (SMTP) y por WhatsApp ==
+1) NUEVO: Administracion > Configuracion > pestana "Correo y WhatsApp". Dos tarjetas independientes,
+   cada una con su propio interruptor "Activo":
+   - CORREO: servidor SMTP, puerto, seguridad (STARTTLS/SSL/sin cifrar), usuario, contraseña
+     (para Gmail es una "contraseña de aplicacion", no la contraseña normal), remitente y nombre
+     del remitente. Boton "Probar" para mandar un correo de prueba con lo ya guardado. NO usa
+     PHPMailer ni composer: el envio SMTP esta hecho a mano en core/Correo.php.
+   - WHATSAPP: vinculo NO oficial, igual que WhatsApp Web (no es la API de Meta ni Twilio). Hace
+     falta un servicio aparte, siempre encendido, en la carpeta nueva "whatsapp-bridge/" (Node.js):
+     vea whatsapp-bridge/LEEME.txt para instalarlo. En Configuracion se pone la direccion de ese
+     servicio y un token compartido; al guardar aparece un codigo QR para escanear desde el celular
+     (WhatsApp > Dispositivos vinculados > Vincular un dispositivo).
+2) Los anuncios (Dashboard > Anuncios) NO tienen casillas nuevas: cuando se publica un anuncio con
+   "Avisar por notificacion" marcado, el sistema intenta avisar tambien por correo y por WhatsApp a
+   quienes tengan ese dato de contacto, SOLO si el canal respectivo esta "Activo" en Configuracion.
+   El correo de cada persona sale de su cuenta de acceso si tiene, si no del correo corporativo de
+   Personal, y si tampoco del correo personal; el WhatsApp usa el telefono registrado en Personal.
+3) Si un canal falla (SMTP caido, WhatsApp desvinculado, el puente de Node.js apagado) el anuncio
+   se publica igual y avisa por los demas medios: nunca se pierde el anuncio por un canal caido.
+   Las contraseñas y el token nunca se muestran de vuelta ni quedan en el registro de Auditoria
+   (solo dice "actualizada" o "sin cambio"); dejar la contraseña en blanco al guardar la conserva.
+4) Esta version SOLO deja todo listo (pantallas, codigo y el puente de WhatsApp): no trae un correo
+   ni un numero de WhatsApp configurados. Para activarlo hace falta, aparte de este zip:
+   a) Un correo (recomendado uno nuevo solo para el sistema, ej. Gmail) con su "contraseña de
+      aplicacion" (Google > Cuenta > Seguridad > Verificacion en 2 pasos > Contraseñas de aplicaciones).
+   b) Un numero de WhatsApp dedicado (no se recomienda un celular personal) y Node.js instalado en
+      el servidor para correr whatsapp-bridge/ (vea su LEEME.txt, paso a paso).
+   Mientras tanto el sistema sigue avisando como siempre (notificacion interna, campana).
+5) Probado de punta a punta contra un servidor SMTP real y una instancia real del puente de
+   WhatsApp (protocolo EHLO/AUTH LOGIN/MAIL FROM/RCPT TO/DATA, reparto por prioridad de correo,
+   validaciones, permisos y el aviso automatico al publicar un anuncio).
+- No hace falta ejecutar nada en la base de datos: la configuracion usa la tabla "configuracion" que
+  ya existia (la misma de la consulta de DNI/RUC). En el navegador pulse Ctrl+F5 para recargar los
+  archivos nuevos.
+- Archivos nuevos: core/{Correo,WhatsApp}.php, api/configuracion/{correo,whatsapp}.php,
+  assets/js/core/canales.js, carpeta whatsapp-bridge/ completa (package.json, .env.example,
+  index.js, .htaccess, .gitignore, LEEME.txt). Modificados: core/{Anuncios,Guias}.php,
+  api/anuncios/guardar.php, views/configuracion/principal.php, assets/js/app/catalogos.js, index.php.
+
+== 14/10/2026 - RR.HH.: Auditoria de activar/desactivar y nueva pestana de Reportes ==
+1) AUDITORIA: activar o desactivar un item del catalogo de equipos de TI, de la biblioteca de
+   requisitos o del catalogo de EPP (los 3 de Requerimiento de personal) ahora queda registrado
+   en Auditoria (antes solo quedaba registrado crear, editar y eliminar; activar/desactivar no
+   dejaba rastro).
+2) REPORTES: nueva pestana "RR.HH." (junto a Resumen, Tickets, Mantenimiento, Inventario,
+   Software, Asignaciones y Personal) con los requerimientos de personal del area:
+   vacantes pendientes, cuantas estan atrasadas (paso la fecha limite), tiempo promedio de
+   cobertura (de creado a cubierto), solicitadas y cubiertas por mes, y el detalle por estado
+   y por area. Se puede descargar en CSV o Excel igual que las demas pestanas, y tambien sale
+   en el informe imprimible (el boton de PDF).
+   Quien tiene el permiso "Ver reportes de mi area" (no el de todas las areas) tambien ve esta
+   pestana, limitada a su propia area.
+3) GUIAS: se actualizo la ayuda del Dashboard (ya mencionaba los indicadores de RR.HH. que
+   siempre mostro: contratos por vencer/vencidos, vacaciones pendientes y requerimientos
+   pendientes/atrasados, pero la guia no los explicaba) y la de Reportes (se agrego la
+   explicacion de la nueva pestana RR.HH.).
+4) El Dashboard no se tocó: ya mostraba lo necesario de RR.HH., solo faltaba documentarlo (punto 3).
+- No hace falta ejecutar nada en la base de datos ni tocar archivos de configuracion.
+  En el navegador pulse Ctrl+F5 para recargar los archivos nuevos.
+- Archivos modificados: api/requerimientos/{equipos_catalogo,requisitos_catalogo,epp}.php,
+  core/{Reportes,Guias}.php, api/reportes/{datos,exportar}.php,
+  views/reportes/{principal,informe}.php, assets/js/app/reportes.js.
+
+== 15/10/2026 - RR.HH.: Contratos con antiguedad y vacaciones, acumulacion por tipo de contrato, e importar asistencia desde Excel/CSV ==
+1) CONTRATOS: la lista ahora muestra, por cada persona, su antiguedad (tiempo trabajado desde su fecha de
+   ingreso) y los dias de vacaciones que tiene disponibles en este momento. Se calcula solo, no hay que ir
+   a otra pantalla a revisarlo.
+2) VACACIONES: ahora el saldo depende del tipo de contrato VIGENTE de la persona (modulo Contratos):
+   - Indeterminado, Plazo fijo y Part time: acumulan igual que antes (2.5 dias por mes trabajado).
+   - Practicante y Locacion de servicios: YA NO acumulan vacaciones (asi suele ser en la practica). Si
+     alguien aun no tiene ningun contrato registrado, el sistema asume que si acumula.
+   - Al elegir la persona en «Nueva solicitud» se avisa si no acumula, y el sistema ya no deja registrar
+     una solicitud si no hay saldo (esto ya funcionaba; ahora tambien aplica cuando el saldo es 0 por el
+     tipo de contrato).
+3) ASISTENCIA x VACACIONES: si una persona tiene una solicitud de vacaciones APROBADA que cubre el dia
+   que se esta marcando, el sistema ya la muestra marcada sola como «Vacaciones» (con el aviso
+   «automatico»): no hay que escribirla a mano, y se cuenta igual en los resumenes (hoy y por persona)
+   aunque nadie pulse «Guardar» ese dia.
+4) ASISTENCIA: nuevo boton «Importar Excel/CSV» para subir las marcaciones de un marcador de huella (o
+   cualquier otro equipo) exportadas a un archivo .xlsx o .csv. La primera fila debe tener los encabezados
+   DNI, Fecha, y opcionalmente Hora, Tipo y Observacion (hay un enlace para descargar una plantilla de
+   ejemplo); el DNI debe coincidir con el de la ficha de Personal. Al terminar, avisa cuantas filas se
+   guardaron y el detalle de las que tuvieron problemas (DNI que no existe, fecha vacia o futura, etc).
+   El sistema todavia NO se conecta en vivo al equipo marcador (no es posible sin saber la marca/protocolo
+   del fabricante): por ahora se trabaja exportando desde el equipo e importando ese archivo aqui. No se
+   necesito ninguna libreria externa ni composer para leer el Excel.
+5) Probado de punta a punta (42 verificaciones automaticas) contra una base de prueba con varios tipos de
+   contrato, vacaciones aprobadas superpuestas con el dia de hoy, y archivos .xlsx/.csv reales (incluyendo
+   fechas y horas guardadas como numero de Excel, no solo como texto).
+- No hace falta ejecutar nada en la base de datos: las tablas y columnas nuevas (como el "origen" de la
+  marca de asistencia) se crean solas la primera vez que se usan. En el navegador pulse Ctrl+F5.
+- Archivos nuevos: core/ImportadorArchivo.php, api/asistencia/{importar,plantilla}.php.
+  Modificados: core/{Vacaciones,Asistencia,Guias}.php, api/contratos/listar.php,
+  views/rrhh/{contratos,vacaciones,asistencia}.php, assets/js/app/{contratos,vacaciones,asistencia}.js.
+
+== 15/10/2026 - RR.HH.: listado de personal contratado, sugerencia de vacaciones, y mas horas y tolerancia en Asistencia ==
+1) CONTRATOS: la pantalla ahora tiene 2 pestañas. «Personal contratado» muestra un solo renglon por
+   persona, solo las que tienen contrato vigente en este momento (persona, tipo, puesto, inicio, fin,
+   antiguedad, vacaciones y estado). «Historial completo» es la lista de siempre, con todos los
+   contratos (incluidos los ya renovados o finalizados).
+2) VACACIONES: el sistema ya recalcula solo y avisa arriba, en «Ya pueden salir», a quien ya acumulo
+   30 dias o mas disponibles: aparece con un boton «Registrar» que abre la solicitud con esa persona
+   ya elegida, sin tener que revisar el saldo de cada persona una por una.
+3) ASISTENCIA: ahora se marcan 4 horas por persona (antes solo una): entrada, salida a almorzar,
+   regreso de almuerzo y salida. Se puede marcar a mano o importarlas del Excel/CSV (la plantilla de
+   ejemplo ya trae las 4 columnas).
+4) ASISTENCIA: se definio el horario de referencia (lunes a viernes 8:00 a.m.-5:00 p.m. con almuerzo
+   de 1-2 p.m.; sabados 8:00 a.m.-1:00 p.m., jornada corrida) y una tolerancia de ingreso de 15 minutos
+   (entrar a las 8:00 o hasta las 8:15 cuenta como Normal). Con eso, el sistema calcula solo si la
+   marca es Normal o Tardanza con solo la hora de entrada (a mano o importada); se puede seguir
+   forzando otra cosa a mano (Falta, Permiso, etc.). Esto tambien aplica al importar: si el archivo del
+   marcador de huella no trae la columna Tipo (lo usual), el sistema la calcula el solo.
+   Nota: todavia no se valida si la salida, el almuerzo o el regreso se hicieron a la hora que
+   correspondia (solo se guardan); eso se puede agregar despues si hace falta.
+5) Probado de punta a punta (57 verificaciones automaticas: saldo y sugeridos de vacaciones, el
+   listado de personal contratado con el filtro de vigentes, el calculo automatico de Normal/Tardanza
+   en el limite exacto de la tolerancia -8:15 Normal, 8:16 Tardanza- tanto a mano como importado, y las
+   4 horas guardandose correctamente).
+- No hace falta ejecutar nada en la base de datos: las columnas nuevas de la hora de salida, salida e
+  ingreso de almuerzo se crean solas la primera vez que se usan. En el navegador pulse Ctrl+F5.
+- Archivos nuevos: api/vacaciones/sugeridos.php.
+  Modificados: core/{Vacaciones,Asistencia,Guias}.php, api/asistencia/plantilla.php,
+  views/rrhh/{contratos,vacaciones,asistencia}.php, assets/js/app/{contratos,vacaciones,asistencia}.js.
+
+== 15/10/2026 - Rastreo de equipos: agente totalmente oculto (sin cmd visible) y ubicacion mas precisa ==
+1) AGENTE .PS1 (el que se descarga desde Equipos > Seguimiento > Rastreo en vivo > Detalle > Descargar
+   agente): ahora se instala para ejecutarse SIN NINGUNA VENTANA VISIBLE. Antes, aunque la tarea
+   programada ya usaba "-WindowStyle Hidden", Windows a veces de todas formas mostraba un parpadeo de
+   la consola (es un problema conocido del Programador de tareas). Ahora se lanza a traves de un
+   pequeno script invisible (.vbs) que impide que la ventana llegue a aparecer, y la tarea programada
+   queda ademas oculta en el Programador de tareas. Quien ya instalo el agente antes debe volver a
+   ejecutar el .ps1 con -Instalar (o -Desinstalar y luego -Instalar) para que tome este cambio; no hace
+   falta volver a descargarlo si no se le cambio el servidor o el token.
+2) AGENTE .PS1: la posicion del equipo (GPS/Wi-Fi de Windows) ahora se escucha durante unos segundos
+   mas (hasta 20 segundos) y se usa la lectura MAS PRECISA de ese lapso, no la primera que entrega
+   Windows (que casi siempre es la mas gruesa). Esto reduce el radio de error que se ve en el mapa
+   cuando el equipo tiene la Ubicacion de Windows activada. Es una mejora real pero tiene un limite
+   fisico: si Windows solo puede triangular por Wi-Fi (sin GPS), nunca va a dar metros exactos, solo
+   una estimacion mejor que antes.
+3) AGENTE .BAT (version minima, sin Wi-Fi ni posicion): se agrego storage/sigti-rastreo-oculto.vbs y se
+   actualizaron sus instrucciones para programar la tarea apuntando a ese .vbs en vez del .bat directo
+   (programar un .bat siempre muestra el cmd negro; el .vbs lo evita). Quien ya lo tiene instalado con
+   el metodo anterior deberia reprogramar la tarea con el nuevo comando (vea el .bat o la guia).
+4) GUIA TECNICA (Equipos > Seguimiento > guia imprimible) actualizada con ambos puntos.
+- No hace falta tocar la base de datos. Quien ya tenga agentes instalados en equipos, para que tomen
+  estos cambios debe volver a instalarlos (vea los puntos 1 y 3); mientras no se reinstalen, siguen
+  funcionando igual que antes (solo que con el cmd visible).
+- Archivos nuevos: storage/sigti-rastreo-oculto.vbs.
+  Modificados: api/rastreo/agente.php, storage/agente-rastreo.bat, views/rastreo/guia.php.
+
+== 15/10/2026 - Correccion: "Personal contratado" no mostraba a todo el personal con contrato ==
+1) BUG REAL ENCONTRADO Y CORREGIDO: la pestana "Personal contratado" (RR.HH. > Contratos) usaba por
+   error el mismo filtro que la opcion "Vigente" del desplegable de Historial. Ese filtro es mas
+   angosto de lo que parece: solo trae contratos vigentes a los que les falten MAS de 30 dias para su
+   fin (o sean a plazo indeterminado). Por eso, cualquier persona contratada cuyo contrato estuviera
+   "Por vencer" (dentro de 30 dias) o ya "Vencido" (vencio y todavia no se finalizo en el sistema)
+   desaparecia de la pestana "Personal contratado", aunque sigue activa y con contrato vigente. Esto
+   coincide exactamente con lo reportado: personal contratado real que no aparecia en esa pestana.
+2) CORRECCION: "Personal contratado" ahora usa un filtro propio que trae a TODOS los que tengan un
+   contrato activo (vigente=1), sin importar si estan por vencer o vencidos; esos casos se siguen
+   viendo igual en la columna "Estado" de cada fila (en ambar o en rojo). El filtro "Vigente" del
+   desplegable de "Historial completo" NO se tomo, sigue funcionando como antes (categoria mas fina,
+   para quien quiera ver solo lo que esta lejos de vencer).
+3) "Historial completo": se revisaron ambos tabs (HTML, columnas y DataTables) y la consulta que trae
+   los datos; no se encontro ningun otro problema aparte del descrito arriba.
+4) VACACIONES: se revisaron a fondo el saldo, "Ya pueden salir de vacaciones" y el listado de
+   solicitudes, y no se encontro ahi el mismo tipo de error (el calculo de vacaciones usa el contrato
+   vigente de la persona sin la restriccion de los 30 dias, asi que no le afecta este bug). Si el
+   problema en Vacaciones sigue apareciendo despues de esta actualizacion, por favor indique
+   exactamente que pantalla/casilla no refleja al personal contratado (el saldo de alguien en
+   particular, el panel "Ya pueden salir", o el listado de solicitudes) para revisarlo puntualmente.
+5) Probado con una prueba nueva que reproduce el error exacto (una persona con contrato "por vencer" y
+   otra "vencida" que antes desaparecian de "Personal contratado" y ahora aparecen) — 60/60
+   verificaciones automaticas en total.
+- No hace falta tocar la base de datos ni reinstalar nada; en el navegador pulse Ctrl+F5.
+- Modificados: api/contratos/listar.php, assets/js/app/contratos.js.
+
+== 15/10/2026 - RR.HH.: las tablas de Contratos y Vacaciones ahora son dinamicas (responsivas) ==
+1) PROBLEMA REPORTADO: en pantallas o ventanas angostas, las tablas de "Personal contratado",
+   "Historial completo" (Contratos) y la de Vacaciones se veian apretadas: los nombres se partian en
+   varias lineas y las columnas se encimaban, en vez de acomodarse al espacio disponible.
+2) CORRECCION: esas 3 tablas ahora usan el complemento oficial "Responsive" de DataTables. Cuando no
+   entran todas las columnas en el ancho disponible, las menos importantes (Puesto, Antigüedad,
+   Vacaciones, etc.) se esconden solas detras de una flechita "▶" al inicio de la fila; tocandola se
+   abre un detalle con esos datos. Persona, Estado y Acciones son las que se quedan visibles hasta el
+   final. En pantallas anchas (una computadora normal) se siguen viendo todas las columnas igual que
+   antes, no cambia nada ahi.
+3) BUG ADICIONAL ENCONTRADO Y CORREGIDO de paso: en "Historial completo" (la pestaña que NO esta
+   activa al entrar a Contratos) las columnas no se acomodaban nunca, ni siquiera agrandando o
+   achicando la ventana despues, porque esa tabla se arma mientras su pestaña todavia esta oculta y
+   el sistema no se daba cuenta cuando se la mostraba. Ahora, al tocar cualquiera de las dos pestañas
+   ("Personal contratado" / "Historial completo"), la tabla se vuelve a acomodar en ese momento.
+4) ALCANCE: por ahora este ajuste es solo para RR.HH. (Contratos y Vacaciones); la grilla de Asistencia
+   no se toco porque es una tabla de edicion (con casillas de hora), no una lista para acomodar de la
+   misma forma. Si se quiere extender este mismo comportamiento al resto del sistema (Equipos,
+   Tickets, Personal, etc.), se puede hacer como un proximo paso: aviseme.
+- No hace falta tocar la base de datos. En el navegador pulse Ctrl+F5 para que cargue el complemento
+  nuevo (Responsive de DataTables).
+- Modificados: index.php, assets/js/core/datatables.js, assets/js/app/{contratos,vacaciones}.js,
+  views/rrhh/{contratos,vacaciones}.php.
+
+== 15/10/2026 - RR.HH.: nuevo tipo de contrato "Por horas" (Contratos y Requerimiento de personal) ==
+1) PEDIDO: en el campo "Tipo de contrato sugerido" (al solicitar personal) hacia falta un tipo para el
+   personal que la empresa contrata por horas, no solo por periodos (indeterminado, plazo fijo, etc.).
+2) CORRECCION: se agrego "Por horas" a la lista de tipos de contrato. Aparece automaticamente en los 3
+   lugares donde se usa: el campo "Tipo de contrato sugerido" al solicitar personal, el mismo campo en
+   el catalogo de "Puestos y requisitos", y el campo "Tipo" al registrar un contrato real a una persona
+   en RR.HH. > Contratos.
+3) VACACIONES: el personal contratado "Por horas" acumula vacaciones igual que "Part time" (2.5 dias por
+   mes trabajado); no quedo en la misma excepcion que "Practicante" y "Locacion de servicios" (esos dos
+   siguen sin acumular, como ya funcionaba). Si mas adelante se prefiere que "Por horas" NO acumule
+   vacaciones, o que acumule con otra formula, aviseme y lo ajusto.
+4) BUG ADICIONAL ENCONTRADO Y CORREGIDO de paso: al registrar un contrato real (RR.HH. > Contratos >
+   Nuevo contrato), el tipo se validaba contra una lista escrita a mano en el codigo, separada de la
+   lista oficial de tipos de contrato; si en el futuro se agregaba un tipo nuevo ahi y alguien se
+   olvidaba de venir a actualizar tambien esa validacion, el sistema rechazaba el contrato aunque el
+   tipo ya existiera. Ahora esa validacion se toma siempre de la misma lista oficial, para que no vuelva
+   a pasar.
+5) Probado con una prueba nueva (crear un contrato real "Por horas", revisar que su saldo de vacaciones
+   acumule igual que Part time, y crear un requerimiento y un puesto del catalogo con ese mismo tipo) —
+   198/198 verificaciones automaticas en total (63 de Contratos/Vacaciones/Asistencia + 135 de
+   Requerimiento de personal).
+- No hace falta tocar la base de datos ni reinstalar nada; en el navegador pulse Ctrl+F5.
+- Modificados: core/Contratos.php, core/Guias.php, api/contratos/gestionar.php,
+  assets/js/app/{contratos,requerimientos}.js.
