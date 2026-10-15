@@ -51,6 +51,8 @@ PEM;
         'carnets'        => ['Carnets',                   ['carnets'],              ['carnets/lista']],
         'etiquetas'      => ['Etiquetas de equipos',      ['etiquetas'],            ['etiquetas/plantillas']],
         'chat'           => ['Chat interno',              ['chat'],                 ['chat/principal']],
+        'rrhh'           => ['RR.HH. ampliado',           ['contratos', 'vacaciones', 'asistencia', 'planillas', 'requerimientos', 'rrhh'],
+                              ['rrhh/contratos', 'rrhh/vacaciones', 'rrhh/asistencia', 'rrhh/planillas', 'rrhh/requerimientos']],
     ];
 
     /** POST que solo CONSULTAN (por ejemplo las listas con DataTables): se permiten aunque el sistema este en solo lectura. */

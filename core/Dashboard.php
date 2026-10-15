@@ -170,6 +170,48 @@ class Dashboard
             if ($c > 0) $al[] = ['nivel' => 'ambar', 'n' => $c, 'texto' => $c . ' cese(s) en los próximos 30 días (recoger equipos)', 'ruta' => 'personal/lista', 'icono' => 'bi-person-dash'];
         }
 
+        // ---------------- RR.HH. ampliado (contratos, vacaciones y requerimiento de personal) ----------------
+        try {
+            if (Licencia::moduloActivo('rrhh')) {
+                if (Auth::can('rrhh', 'ver')) {
+                    Contratos::asegurar();
+                    Vacaciones::asegurar();
+                    $rrhh = [
+                        'contratos_por_vencer' => count(Contratos::porVencer(30)),
+                        'contratos_vencidos'   => self::n("SELECT COUNT(*) FROM personal_contratos WHERE vigente = 1 AND fecha_fin IS NOT NULL AND fecha_fin < ?", [$hoy]),
+                        'vacaciones_pendientes'=> self::n("SELECT COUNT(*) FROM rrhh_vacaciones WHERE estado = 'pendiente'"),
+                    ];
+                    $out['rrhh'] = $rrhh;
+                    if (Auth::can('rrhh', 'gestionar')) {
+                        if ($rrhh['contratos_vencidos'] > 0) $al[] = ['nivel' => 'rojo', 'n' => $rrhh['contratos_vencidos'], 'texto' => $rrhh['contratos_vencidos'] . ' contrato(s) vencido(s) sin renovar ni finalizar', 'ruta' => 'rrhh/contratos', 'icono' => 'bi-file-earmark-x'];
+                        if ($rrhh['contratos_por_vencer'] > 0) $al[] = ['nivel' => 'ambar', 'n' => $rrhh['contratos_por_vencer'], 'texto' => $rrhh['contratos_por_vencer'] . ' contrato(s) por vencer en 30 días', 'ruta' => 'rrhh/contratos', 'icono' => 'bi-file-earmark-person'];
+                        if ($rrhh['vacaciones_pendientes'] > 0) $al[] = ['nivel' => 'ambar', 'n' => $rrhh['vacaciones_pendientes'], 'texto' => $rrhh['vacaciones_pendientes'] . ' solicitud(es) de vacaciones por revisar', 'ruta' => 'rrhh/vacaciones', 'icono' => 'bi-airplane'];
+                    }
+                }
+
+                // Requerimiento de personal: cualquier area que pide (solicitar/ver_area) o Sistemas/RR.HH. (ver/gestionar)
+                if (Auth::can('rrhh', 'solicitar') || Auth::can('rrhh', 'ver_area') || Auth::can('rrhh', 'ver') || Auth::can('rrhh', 'gestionar')) {
+                    Requerimientos::asegurar();
+                    if (Auth::can('rrhh', 'ver') || Auth::can('rrhh', 'gestionar')) {
+                        $reqPend = self::n("SELECT COUNT(*) FROM rrhh_requerimientos WHERE estado IN ('pendiente','en_proceso')");
+                    } elseif (Auth::can('rrhh', 'ver_area') && ($areaReq = Requerimientos::areaDelUsuario($uid))) {
+                        $reqPend = self::n("SELECT COUNT(*) FROM rrhh_requerimientos WHERE estado IN ('pendiente','en_proceso') AND (area_id = ? OR solicitante_usuario_id = ?)", [$areaReq, $uid]);
+                    } else {
+                        $reqPend = self::n("SELECT COUNT(*) FROM rrhh_requerimientos WHERE estado IN ('pendiente','en_proceso') AND solicitante_usuario_id = ?", [$uid]);
+                    }
+                    $out['rrhh_requerimientos'] = ['pendientes' => $reqPend];
+                    if (Auth::can('rrhh', 'gestionar')) {
+                        $reqAtrasados = self::n("SELECT COUNT(*) FROM rrhh_requerimientos WHERE estado IN ('pendiente','en_proceso') AND fecha_limite IS NOT NULL AND fecha_limite < ?", [$hoy]);
+                        $reqPorTomar = self::n("SELECT COUNT(*) FROM rrhh_requerimientos WHERE estado = 'pendiente'");
+                        if ($reqAtrasados > 0) $al[] = ['nivel' => 'rojo', 'n' => $reqAtrasados, 'texto' => $reqAtrasados . ' requerimiento(s) de personal atrasado(s) (venció el plazo)', 'ruta' => 'rrhh/requerimientos', 'icono' => 'bi-person-fill-exclamation'];
+                        if ($reqPorTomar > 0) $al[] = ['nivel' => 'ambar', 'n' => $reqPorTomar, 'texto' => $reqPorTomar . ' requerimiento(s) de personal por atender', 'ruta' => 'rrhh/requerimientos', 'icono' => 'bi-person-plus'];
+                        $puestosPend = self::n("SELECT COUNT(*) FROM rrhh_puesto_catalogo WHERE estado = 'pendiente'");
+                        if ($puestosPend > 0) $al[] = ['nivel' => 'ambar', 'n' => $puestosPend, 'texto' => $puestosPend . ' puesto(s) nuevo(s) propuesto(s) por validar en el catálogo', 'ruta' => 'rrhh/requerimientos', 'icono' => 'bi-person-vcard'];
+                    }
+                }
+            }
+        } catch (Throwable $e) { error_log('[SIGTI] Dashboard rrhh: ' . $e->getMessage()); }
+
         // rojas primero
         usort($al, fn($a, $b) => ($a['nivel'] === 'rojo' ? 0 : 1) <=> ($b['nivel'] === 'rojo' ? 0 : 1));
         $out['alertas'] = $al;
@@ -183,6 +225,8 @@ class Dashboard
         if ($puede('software')) $rap[] = ['software/lista', 'bi-app-indicator', 'Software'];
         if (Auth::can('reportes', 'ver') || Auth::can('reportes', 'ver_area')) $rap[] = ['reportes/principal', 'bi-graph-up-arrow', 'Reportes'];
         if (isset($out['capacitaciones'])) $rap[] = ['capacitaciones/lista', 'bi-mortarboard', Auth::can('capacitaciones', 'solicitar') ? 'Pedir capacitación' : 'Capacitaciones'];
+        if (isset($out['rrhh'])) $rap[] = ['rrhh/contratos', 'bi-person-badge', 'RR.HH.'];
+        elseif (isset($out['rrhh_requerimientos'])) $rap[] = ['rrhh/requerimientos', 'bi-person-plus', 'Pedir personal'];
         if (Licencia::moduloActivo('chat')) $rap[] = ['chat/principal', 'bi-chat-dots', 'Chat'];
         $rap[] = ['guias/principal', 'bi-journal-text', 'Guías'];
         $out['rapidos'] = $rap;

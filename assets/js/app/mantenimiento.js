@@ -64,12 +64,22 @@ return b+'</div>';
 ],{order:[[8,'desc']]});
  $('#btn-filtrar-mt').on('click',function(){Mantenimiento.tabla.draw()});
  $('#mtf-estado,#mtf-tipo,#mtf-proveedor,#mtf-atrasados').on('change',function(){Mantenimiento.tabla.draw()});
+// buscador de texto libre (codigo, equipo, proveedor, tecnico, ticket, diagnostico — ver listar.php)
+var tBuscarMt=null;
+ $('#mtf-buscar').on('input',function(){
+var val=$(this).val();
+clearTimeout(tBuscarMt);
+tBuscarMt=setTimeout(function(){Mantenimiento.tabla.search(val).draw()},350);
+});
  $('#btn-limpiar-mt').on('click',function(){
- $('#mtf-estado,#mtf-tipo,#mtf-proveedor').val('');
+ $('#mtf-estado,#mtf-tipo,#mtf-proveedor,#mtf-buscar').val('');
  $('#mtf-atrasados').prop('checked',false);
 Mantenimiento.tabla.search('').draw();
 });
+ $('#btn-exportar-mt-csv').on('click',function(e){e.preventDefault();Mantenimiento._exportar('csv')});
+ $('#btn-exportar-mt-xls').on('click',function(e){e.preventDefault();Mantenimiento._exportar('excel')});
  $('#btn-nuevo-mt').on('click',function(){Mantenimiento._form()});
+Mantenimiento._filtroPreventivos();
 // (el boton "ver" lo atiende un manejador delegado al final del archivo)
 Mantenimiento._motorEstado();
 Mantenimiento._stats();
@@ -116,7 +126,73 @@ var sla=d.sla_vencidos||[];
 '<table class="table table-sm table-bordered tabla-mini mb-0" style="font-size:11px"><thead><tr><th>Código</th><th>Equipo</th><th>Estado</th><th>SLA venció</th></tr></thead><tbody>'+
 sla.map(function(s){return '<tr class="table-danger"><td><b>'+esc(s.codigo)+'</b></td><td>'+esc(s.equipo)+'</td><td>'+esc(EST_MT[s.estado]||s.estado)+'</td><td>'+esc((s.sla_limite||'').slice(0,16))+'</td></tr>'}).join('')+'</tbody></table>'
 :'<span class="text-muted">Nada vencido. ✔</span>');
+// ---- tiempo promedio de atencion ----
+ $('#mt-p-tprom').text(+d.tiempo_prom_general>0?Number(d.tiempo_prom_general).toLocaleString()+' día(s)':'— (sin cierres aún)');
+var tprom=d.tiempo_prom_tipo||[];
+ $('#mt-p-tprom-tipo').html(tprom.length?
+'<table class="table table-sm table-bordered tabla-mini mb-0" style="font-size:11px"><thead><tr><th>Tipo</th><th>Días prom.</th><th>N°</th></tr></thead><tbody>'+
+tprom.map(function(t){return '<tr><td>'+esc(t.tipo)+'</td><td>'+esc(t.dias)+'</td><td>'+esc(t.n)+'</td></tr>'}).join('')+'</tbody></table>'
+:'<span class="text-muted">Sin datos aún.</span>');
+// ---- top proveedores ----
+var porProv=d.por_proveedor||[];
+ $('#mt-p-proveedores').html(porProv.length?
+'<table class="table table-sm table-bordered tabla-mini mb-0" style="font-size:11px"><thead><tr><th>Proveedor</th><th>N°</th><th>Costo prom.</th><th>Días prom.</th></tr></thead><tbody>'+
+porProv.map(function(p){return '<tr><td>'+esc(p.nombre)+'</td><td>'+esc(p.n)+'</td><td>'+(p.costo_prom>0?'S/ '+Number(p.costo_prom).toLocaleString():'—')+'</td><td>'+(p.dias_prom!=null?esc(p.dias_prom):'—')+'</td></tr>'}).join('')+'</tbody></table>'
+:'<span class="text-muted">Sin mantenimientos con proveedor aún.</span>');
+// ---- top tecnicos internos ----
+var porTec=d.por_tecnico||[];
+ $('#mt-p-tecnicos').html(porTec.length?
+'<table class="table table-sm table-bordered tabla-mini mb-0" style="font-size:11px"><thead><tr><th>Técnico</th><th>N°</th><th>Días prom.</th></tr></thead><tbody>'+
+porTec.map(function(t){return '<tr><td>'+esc(t.tecnico)+'</td><td>'+esc(t.n)+'</td><td>'+(t.dias_prom!=null?esc(t.dias_prom):'—')+'</td></tr>'}).join('')+'</tbody></table>'
+:'<span class="text-muted">Sin mantenimientos internos aún.</span>');
+// ---- equipos con fallas recurrentes ----
+var topEq=d.top_equipos||[];
+ $('#mt-p-topequipos').html(topEq.length?
+'<table class="table table-sm table-bordered tabla-mini mb-0" style="font-size:11px"><thead><tr><th>Equipo</th><th>Tipo</th><th>Mantenimientos (12 m.)</th></tr></thead><tbody>'+
+topEq.map(function(e){return '<tr><td><b>'+esc(e.codigo)+'</b> '+esc(e.marca||'')+' '+esc(e.modelo||'')+'</td><td>'+esc(e.tipo)+'</td><td><span class="badge text-bg-warning text-dark">'+esc(e.n)+'</span></td></tr>'}).join('')+'</tbody></table>'
+:'<span class="text-muted">Sin equipos con 2 o más mantenimientos aún.</span>');
 }).catch(function(){});
+},
+/* ============ BUSCADOR + FILTRO: preventivos programados (tabla renderizada en servidor) ============ */
+_filtroPreventivos:function(){
+var tabla=$('#tb-prev');
+if(!tabla.length)return;
+var aplicar=function(){
+var txt=($('#prevf-buscar').val()||'').toLowerCase().trim();
+var sit=$('#prevf-situacion').val()||'';
+var visibles=0;
+tabla.find('tbody tr[data-ciclo]').each(function(){
+var fila=$(this);
+var ok=(!sit||fila.data('ciclo')===sit)&&(!txt||(fila.data('busca')||'').indexOf(txt)>=0);
+fila.toggleClass('d-none',!ok);
+if(ok)visibles++;
+});
+ $('#prev-sin-resultados').toggleClass('d-none',visibles>0);
+};
+var tBuscarPrev=null;
+ $('#prevf-buscar').on('input',function(){clearTimeout(tBuscarPrev);tBuscarPrev=setTimeout(aplicar,250)});
+ $('#prevf-situacion').on('change',aplicar);
+},
+/* ============ EXPORTAR: descarga la tabla de mantenimientos con los filtros aplicados (CSV o Excel) ============ */
+_exportar:function(formato){
+var q=$.param({
+formato:formato,csrf_token:CSRF.token,
+f_estado:$('#mtf-estado').val()||'',f_tipo:$('#mtf-tipo').val()||'',
+f_proveedor:$('#mtf-proveedor').val()||0,f_atrasados:$('#mtf-atrasados').is(':checked')?1:0,
+f_buscar:$('#mtf-buscar').val()||''
+});
+fetch(BASE_URL+'api/mantenimiento/exportar.php?'+q,{credentials:'same-origin'}).then(function(r){
+if(!r.ok)return r.json().then(function(j){throw j},function(){throw{message:'Error ('+r.status+')'}});
+var m=/filename="?([^";]+)"?/.exec(r.headers.get('Content-Disposition')||'');
+var nombre=m?m[1]:('mantenimientos.'+(formato==='csv'?'csv':'xls'));
+return r.blob().then(function(b){
+var a=document.createElement('a');
+a.href=URL.createObjectURL(b);a.download=nombre;
+document.body.appendChild(a);a.click();document.body.removeChild(a);
+setTimeout(function(){URL.revokeObjectURL(a.href)},2000);
+Toast.success('Lista exportada');
+});
+}).catch(function(e){Toast.error((e&&e.message)||'No se pudo exportar')});
 },
 /* ============ NUEVO PROVEEDOR INLINE ============ */
 _formProveedor:function(alVolver){

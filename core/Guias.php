@@ -54,12 +54,13 @@ class Guias
                 'id' => 'dashboard', 'titulo' => 'Dashboard y anuncios', 'icono' => 'speedometer2', 'color' => '#0891b2',
                 'categoria' => 'Para empezar', 'permiso' => null, 'ruta' => 'dashboard/principal', 'para' => 'Todas las personas',
                 'resumen' => 'Qué muestra cada tarjeta, cómo leer «Requiere atención» y cómo publicar anuncios para todo el personal.',
-                'tags' => ['dashboard', 'tarjetas', 'anuncios', 'alertas', 'sla', 'inicio'],
+                'tags' => ['dashboard', 'tarjetas', 'anuncios', 'alertas', 'sla', 'inicio', 'rrhh'],
                 'secciones' => [
                     ['titulo' => 'Qué ves en el Dashboard', 'pasos' => [
                         'Arriba, los accesos rápidos llevan a los módulos que más se usan.',
                         'Las tarjetas resumen la mesa de ayuda, el inventario, la operación (mantenimientos, devoluciones, actas), el software y el personal. Haz clic en una tarjeta para ir al módulo.',
-                        '«Requiere atención» reúne lo urgente: tickets con el SLA vencido, mantenimientos atrasados, devoluciones vencidas, garantías por vencer, licencias por vencer y más. Lo rojo es urgente; lo amarillo conviene revisarlo pronto.',
+                        'Si el módulo de RR.HH. está activo y tienes permiso, también aparecen tarjetas de contratos por vencer/vencidos y vacaciones pendientes, además de alertas de requerimientos de personal pendientes de tomar, atrasados o puestos sin validar (en «Requiere atención»). Llevan directo a RR.HH. › Contratos o RR.HH. › Requerimientos.',
+                        '«Requiere atención» reúne lo urgente: tickets con el SLA vencido, mantenimientos atrasados, devoluciones vencidas, garantías por vencer, licencias por vencer, requerimientos de RR.HH. atrasados y más. Lo rojo es urgente; lo amarillo conviene revisarlo pronto.',
                         '«Para ti» lista tus tickets asignados, los que están sin asignar y los mantenimientos activos.',
                         'Los gráficos muestran los últimos 6 meses. Todo se actualiza solo cada minuto; «Refrescar» lo hace al instante.',
                     ], 'nota' => 'Cada persona ve solo lo que su rol permite. Quien no tiene acceso a Software, por ejemplo, no verá esa tarjeta.'],
@@ -351,8 +352,8 @@ class Guias
             [
                 'id' => 'chat', 'titulo' => 'Chat interno', 'icono' => 'chat-dots', 'color' => '#2563eb',
                 'categoria' => 'Para empezar', 'permiso' => null, 'ruta' => 'chat/principal', 'para' => 'Todas las personas',
-                'resumen' => 'Conversar con una persona, con un área, en grupos o en reuniones, con archivos, menciones y reacciones.',
-                'tags' => ['chat', 'mensajes', 'grupos', 'reuniones', 'archivos', 'emojis', 'menciones'],
+                'resumen' => 'Conversar con una persona, con un área, en grupos o en reuniones, con archivos, stickers, notas de voz, menciones y reacciones.',
+                'tags' => ['chat', 'mensajes', 'grupos', 'reuniones', 'archivos', 'emojis', 'menciones', 'stickers', 'audio', 'nota de voz'],
                 'secciones' => [
                     ['titulo' => 'Empezar una conversación', 'pasos' => [
                         'Desde cualquier pantalla, pulsa el globo azul: se abre un chat emergente para ver tus conversaciones, escribir, adjuntar un archivo o empezar un chat nuevo (persona o área) sin salir de lo que estás haciendo. «Abrir el chat completo» te lleva a este módulo.',
@@ -365,13 +366,18 @@ class Guias
                         'Responde a un mensaje concreto, menciona a alguien con @ y reacciona con un emoji.',
                         'Puedes editar o borrar tus propios mensajes. La campana del chat silencia el sonido de aviso.',
                     ], 'nota' => 'En los chats entre personas, el área de Sistemas puede supervisar la conversación en modo lectura y la pantalla se lo avisa a los participantes.'],
+                    ['titulo' => 'Stickers y notas de voz', 'pasos' => [
+                        'El botón de stickers (junto al de emojis) abre una galería de imágenes para enviar con un clic, igual en el chat completo y en el chat emergente.',
+                        'El botón del micrófono graba una nota de voz desde el navegador (hasta 2 minutos): se puede cancelar antes de enviarla. Se reproduce con un reproductor de audio dentro del mensaje.',
+                        'El área de Sistemas puede agregar (subir una imagen) o quitar stickers del catálogo desde el mismo selector; un sticker quitado ya no se puede volver a enviar, pero los mensajes que ya lo usaron lo siguen mostrando.',
+                    ], 'nota' => 'Grabar audio necesita permiso del navegador para el micrófono, y el navegador solo lo permite si el sitio usa una conexión segura (HTTPS) o se abre como localhost.'],
                 ],
             ],
             [
                 'id' => 'reportes', 'titulo' => 'Reportes e informes', 'icono' => 'graph-up-arrow', 'color' => '#0284c7',
                 'categoria' => 'Análisis', 'permiso' => [['reportes', 'ver'], ['reportes', 'ver_area']], 'ruta' => 'reportes/principal', 'para' => 'Jefatura y gerencia',
                 'resumen' => 'Elegir el período, leer cada pestaña, imprimir el informe para gerencia y descargar los datos en Excel.',
-                'tags' => ['reportes', 'informe', 'excel', 'csv', 'gerencia', 'sla', 'costos', 'pdf'],
+                'tags' => ['reportes', 'informe', 'excel', 'csv', 'gerencia', 'sla', 'costos', 'pdf', 'rrhh'],
                 'secciones' => [
                     ['titulo' => 'Elegir el período', 'pasos' => [
                         'Arriba tienes períodos rápidos (este mes, 30 días, 3 meses, 6 meses, este año) y dos fechas para un rango propio. Pulsa «Aplicar».',
@@ -385,12 +391,13 @@ class Guias
                         'Software: cumplimiento por programa y licencias (muestra la situación actual).',
                         'Asignaciones y actas: entregas, devoluciones vencidas y actas pendientes de firma.',
                         'Personal: ingresos, ceses y distribución por área.',
+                        'RR.HH.: vacantes pendientes, cuántas están atrasadas (pasó la fecha límite), el tiempo promedio que toma cubrir una vacante (desde que se crea el requerimiento hasta que se marca «Cubierto»), solicitadas y cubiertas por mes, y la distribución por estado y por área. No incluye datos de contratos ni de vacaciones.',
                     ]],
                     ['titulo' => 'Imprimir y descargar', 'pasos' => [
                         '«Informe» abre una versión con el logo de la empresa y espacios para firmas, lista para imprimir o guardar como PDF.',
                         '«Descargar» entrega todo el detalle del período en Excel (con formato) o CSV.',
                         'En las tablas de detalle puedes escribir en el buscador para filtrar sin recargar.',
-                    ], 'nota' => 'Si tu permiso es «reportes de mi área», verás los tickets y el personal de tu área.'],
+                    ], 'nota' => 'Si tu permiso es «reportes de mi área», verás los tickets, el personal y el RR.HH. de tu área.'],
                 ],
             ],
             [
@@ -442,6 +449,57 @@ class Guias
                 ],
             ],
             [
+                'id' => 'rrhh', 'titulo' => 'RR.HH. ampliado (Contratos, Vacaciones, Asistencia, Planillas y Requerimiento de personal)', 'icono' => 'person-badge', 'color' => '#7c3aed',
+                'categoria' => 'Personas', 'permiso' => [['rrhh', 'ver'], ['rrhh', 'gestionar'], ['rrhh', 'solicitar'], ['rrhh', 'ver_area'], ['rrhh', 'eliminar']], 'ruta' => 'rrhh/contratos', 'para' => 'Cualquier área (Requerimiento de personal) y RR. HH. / Administradores (el resto)',
+                'resumen' => 'Gestión interna del personal: contratos, vacaciones, asistencia, una planilla referencial y el requerimiento de personal de cada área (con catálogo de puestos, biblioteca de requisitos, equipos de TI, EPP y salario referencial). No reemplaza PLAME ni tiene validez tributaria/legal.',
+                'tags' => ['rrhh', 'contratos', 'vacaciones', 'asistencia', 'planilla', 'boleta', 'personal', 'sueldo', 'requerimiento', 'epp', 'equipos', 'puestos', 'requisitos', 'biblioteca', 'salario', 'antiguedad', 'excel', 'csv', 'importar', 'marcador', 'huella', 'biometrico', 'horario', 'tolerancia', 'tardanza', 'sugerido', 'almuerzo'],
+                'secciones' => [
+                    ['titulo' => 'Contratos', 'pasos' => [
+                        'En RR.HH. › Contratos hay dos pestañas: «Personal contratado» (un renglón por persona, solo las que tienen contrato vigente ahora) e «Historial completo» (todos los contratos de siempre, incluidos los ya renovados o finalizados).',
+                        'Pulsa «Nuevo contrato», elige la persona, el tipo (indeterminado, plazo fijo, practicante, locación, part time o por horas) y las fechas.',
+                        'Cada persona solo puede tener UN contrato vigente a la vez. Para cambiar las condiciones usa «Renovar» (cierra el anterior y crea uno nuevo); para terminarlo sin renovar usa «Finalizar».',
+                        'Las tarjetas de arriba avisan los contratos por vencer en 30 días y los que ya vencieron sin renovar ni finalizar.',
+                        'Ambas pestañas muestran, por cada persona, su antigüedad (tiempo trabajado desde su fecha de ingreso) y los días de vacaciones que tiene disponibles ahora mismo, calculados solos: no hace falta ir a otra pantalla a revisarlo.',
+                    ]],
+                    ['titulo' => 'Vacaciones', 'pasos' => [
+                        'El saldo se calcula solo: 2.5 días por cada mes trabajado desde la fecha de ingreso (30 días al año).',
+                        'Solo acumulan los contratos de plazo indeterminado, plazo fijo, part time y por horas. Practicante y locación de servicios NO acumulan vacaciones (se mira el tipo de su contrato VIGENTE en Contratos); si alguien aún no tiene ningún contrato registrado, el sistema asume que sí acumula.',
+                        'El sistema recalcula solo y avisa arriba («Ya pueden salir») a quién ya le toca: apenas alguien llega a 30 días o más disponibles, aparece en un aviso con un botón «Registrar» que abre la solicitud con esa persona ya elegida. No hay que ir a revisar el saldo de cada persona una por una.',
+                        'Al registrar una solicitud se muestra el saldo disponible (o el aviso de que no acumula); si no alcanza, el sistema avisa antes de guardar.',
+                        'RR.HH. aprueba, rechaza (con motivo) o cancela cada solicitud pendiente desde la lista.',
+                        'Una vez aprobada, esos días aparecen solos en Asistencia (ver abajo): no hay que marcarlos a mano ahí también.',
+                    ]],
+                    ['titulo' => 'Asistencia', 'pasos' => [
+                        'En RR.HH. › Asistencia elige la fecha (y opcionalmente el área) y marca a cada persona: Normal, Tardanza, Falta, Falta justificada, Permiso o Vacaciones. Ahora se registran 4 horas por persona: entrada, salida a almorzar, regreso de almuerzo y salida.',
+                        'Horario de referencia: lunes a viernes de 8:00 a.m. a 5:00 p.m. (almuerzo de 1:00 a 2:00 p.m.); sábados de 8:00 a.m. a 1:00 p.m. (jornada corrida, sin almuerzo). Hay una tolerancia de ingreso de 15 minutos: entrar a las 8:00 o hasta las 8:15 cuenta como Normal.',
+                        'El sistema calcula solo si es Normal o Tardanza apenas se escribe (o se importa) la hora de entrada, usando esa tolerancia; no hay que elegirlo a mano salvo que se quiera marcar otra cosa (Falta, Permiso, etc.), que siempre se puede forzar manualmente.',
+                        'Si la persona tiene una solicitud de vacaciones APROBADA que cubre ese día, el sistema ya la muestra marcada como «Vacaciones» con el aviso «(automático)»: nadie tiene que escribirla a mano, y así se cuenta igual en los resúmenes aunque no se pulse «Guardar» ese día.',
+                        'Se guarda una marca por persona y por día; volver a guardar ese día la actualiza (sea que se escribió a mano o se importó).',
+                        'Botón «Importar Excel/CSV»: sirve para subir las marcaciones de un marcador de huella (o cualquier otro equipo) exportadas a un archivo. El archivo debe tener en la primera fila los encabezados DNI, Fecha, y opcionalmente Hora Entrada, Hora Salida Almuerzo, Hora Entrada Almuerzo, Hora Salida, Tipo y Observación (hay un botón para descargar una plantilla de ejemplo); el DNI debe coincidir con el de la ficha de Personal. Si el archivo no trae el Tipo, el sistema lo calcula solo con la hora de entrada y la tolerancia. Al terminar, avisa cuántas filas se guardaron y cuáles tuvieron problemas (por ejemplo, un DNI que no existe).',
+                        'El sistema todavía no se conecta directo al equipo marcador de huella (no hay forma de saber la marca ni el protocolo de cada fabricante): por ahora se trabaja exportando desde el equipo e importando ese archivo aquí. Tampoco valida todavía si la salida, el almuerzo o el regreso se hicieron a la hora que correspondía (solo se guardan); eso puede agregarse después si hace falta.',
+                    ]],
+                    ['titulo' => 'Planillas', 'pasos' => [
+                        'En la pestaña «Conceptos» se definen los ingresos y descuentos (monto fijo en soles o porcentaje del sueldo base) que se aplican al generar.',
+                        'Elige el periodo (mes) y pulsa «Generar / recalcular»: toma el sueldo del contrato vigente de cada persona activa y aplica los conceptos activos. Se puede recalcular mientras esté en borrador.',
+                        'Cada fila tiene una boleta imprimible (referencial). «Cerrar periodo» deja todas sus planillas en borrador como cerradas; una planilla cerrada se puede «Reabrir» si hay que corregir algo.',
+                    ], 'nota' => 'La planilla de SIGTI es referencial y de uso interno: no reemplaza PLAME, boletas electrónicas ni un sistema contable oficial.'],
+                    ['titulo' => 'Requerimiento de personal', 'pasos' => [
+                        'Cualquier área, desde «Mis requerimientos», pulsa «Solicitar personal»: escribe el puesto (residente, analista, practicante…), la cantidad, un tipo de contrato sugerido (opcional), un salario referencial (mínimo y máximo, opcional), la justificación y el plazo para tener a la persona contratada y firmando sus documentos.',
+                        'Si el puesto escrito ya está activo en el catálogo, aparece debajo una «Ficha del puesto» con sus requisitos (educación, formación, experiencia, etc.) y sugiere el contrato y el salario; si es un puesto nuevo, se registra igual y queda propuesto en el catálogo como «Pendiente de validar».',
+                        'Si la vacante necesita equipos de TI (laptop, módem/router, celular, impresora u otro, según el catálogo) o EPP (casco, guantes, lentes, chaleco…), marca las casillas correspondientes antes de enviar.',
+                        'Una vez enviado, el área YA NO puede editarlo ni cancelarlo: solo puede pedir un cambio a Sistemas / RR.HH. por el chat interno o creando un ticket (botón «Pedir un cambio» en el detalle).',
+                        'Sistemas / RR.HH. ve todos los requerimientos (o los de su área, según el permiso): los toma, corrige si hace falta (incluyendo agregar o quitar equipos de TI y EPP del pedido, sin perder lo que ya estaba marcado como entregado), marca cada equipo o EPP como entregado, y los marca «Cubierto» cuando la vacante se llena, o «Cancelado» con motivo.',
+                        'Un requerimiento ya «Cubierto» o «Cancelado» se puede eliminar de verdad (con su historial, equipos y EPP) solo con el permiso «rrhh.eliminar» —es decir, el área de Sistemas—; mientras esté «Pendiente» o «En proceso» no se puede eliminar, solo cubrirlo o cancelarlo primero.',
+                        'Pestaña «Puestos y requisitos»: quien gestiona RR.HH. valida los puestos propuestos (o los crea directo, ya «Activos»), define el contrato sugerido, el salario referencial y los requisitos —categoría y detalle, tantos como haga falta, ej. Educación / Formación / Experiencia / Otros—, eligiendo de la biblioteca de requisitos o escribiendo uno nuevo (se suma solo a la biblioteca para reutilizarlo en otros puestos), y puede inactivar un puesto; eliminarlo de verdad requiere además el permiso «rrhh.eliminar» (solo se elimina si ningún requerimiento lo usó todavía; si ya se usó, se inactiva).',
+                        'Pestaña «Biblioteca de requisitos»: frases de requisito reutilizables entre varios puestos (agregar, editar, activar/desactivar con rrhh.gestionar; eliminar de verdad con rrhh.eliminar, solo si ningún puesto la tiene asignada).',
+                        'Pestañas «Equipos de TI» y «Catálogo EPP»: las administra quien gestiona RR.HH. (agregar, editar, activar/desactivar); eliminar de verdad un equipo de TI requiere el permiso «rrhh.eliminar» y solo si nunca se pidió en un requerimiento. Los cambios no afectan los requerimientos ya enviados.',
+                    ]],
+                    ['titulo' => 'Encender o apagar el módulo', 'pasos' => [
+                        'Como los demás módulos, RR.HH. ampliado se puede apagar por empresa en Administración › Licencia y rubro › «Módulos de la empresa».',
+                    ]],
+                ],
+            ],
+            [
                 'id' => 'auditoria', 'titulo' => 'Auditoría del sistema', 'icono' => 'journal-check', 'color' => '#b45309',
                 'categoria' => 'Administración', 'permiso' => [['auditoria', 'ver']], 'ruta' => 'auditoria/lista', 'para' => 'Administradores y control interno',
                 'resumen' => 'Revisar quién hizo qué y cuándo: inicios de sesión, cambios, accesos denegados y exportaciones.',
@@ -463,12 +521,19 @@ class Guias
                 'id' => 'configuracion', 'titulo' => 'Configuración y diseñador de etiquetas', 'icono' => 'sliders', 'color' => '#64748b',
                 'categoria' => 'Administración', 'permiso' => [['configuracion', 'gestionar']], 'ruta' => 'configuracion/principal', 'para' => 'Administradores',
                 'resumen' => 'Catálogos del sistema (áreas, tipos de equipo, categorías, prioridades, proveedores…) y cómo diseñar etiquetas.',
-                'tags' => ['configuración', 'catálogos', 'áreas', 'tipos de equipo', 'prioridades', 'proveedores', 'etiquetas', 'plantillas'],
+                'tags' => ['configuración', 'catálogos', 'áreas', 'tipos de equipo', 'prioridades', 'proveedores', 'etiquetas', 'plantillas', 'correo', 'smtp', 'whatsapp', 'anuncios'],
                 'secciones' => [
                     ['titulo' => 'Catálogos', 'pasos' => [
                         'En Administración › Configuración hay una pestaña por catálogo. Agrega, edita o desactiva elementos; un elemento en uso no se borra, se desactiva.',
                         'Las prioridades definen el tiempo del SLA de los tickets. Los tipos de equipo determinan los campos del formulario de equipos y el formato de sus actas.',
                         'También se ajustan datos de la empresa (nombre, RUC) que salen en informes y actas.',
+                    ]],
+                    ['titulo' => 'Correo y WhatsApp (avisos de Anuncios)', 'pasos' => [
+                        'En Administración › Configuración › «Correo y WhatsApp» hay dos tarjetas: una para el correo (SMTP) y otra para WhatsApp. Cada una tiene su propio interruptor «Activo»: mientras esté apagado, ese canal no manda nada aunque esté configurado.',
+                        'Correo: pide el servidor SMTP (ej. smtp.gmail.com), el puerto, el tipo de seguridad (STARTTLS, SSL o sin cifrar), el usuario/correo, la contraseña (para Gmail es una «contraseña de aplicación», no la contraseña normal de la cuenta) y el correo remitente. El botón «Probar» manda un correo de prueba con lo ya guardado.',
+                        'WhatsApp: es un vínculo NO oficial, igual que WhatsApp Web (no es la API de Meta ni un servicio como Twilio). Hace falta tener encendido, en una PC o servidor, el programa aparte de la carpeta «whatsapp-bridge» (vea whatsapp-bridge/LEEME.txt). Ahí se pone la dirección de ese programa (ej. http://127.0.0.1:3300) y un token; al guardar aparece un código QR para escanear desde WhatsApp › Dispositivos vinculados.',
+                        'No hay que marcar nada por cada anuncio: cuando un anuncio se publica con «Avisar por notificación» marcado, el sistema intenta avisar también por correo y por WhatsApp a quienes tengan ese dato de contacto, solo si el canal correspondiente está «Activo». Si un canal falla (SMTP caído, WhatsApp desvinculado), el anuncio igual se publica y avisa por los demás medios: nunca se pierde el anuncio por un canal caído.',
+                        'El correo que recibe cada persona es el de su cuenta (si tiene), si no el correo corporativo de Personal, y si tampoco el correo personal. El WhatsApp usa el teléfono registrado en su ficha de Personal.',
                     ]],
                     ['titulo' => 'Diseñador de etiquetas', 'pasos' => [
                         'En Inventario › Diseñador de Etiquetas pulsa «Nueva plantilla», define el tamaño del papel y arrastra los campos (código, QR, marca, serie…).',
@@ -512,6 +577,7 @@ class Guias
             ['p' => '¿Cómo sé si una laptop tiene licencia de Office o Windows?', 'r' => 'Abre su ficha › «Software». Cada programa muestra su licencia, y si falta aparece «Sin licencia». Para una vista global usa Inventario › Software.', 'tags' => ['software', 'licencia', 'office', 'windows']],
             ['p' => '¿Puedo sacar un informe para gerencia?', 'r' => 'Sí. En Análisis › Reportes elige el período y pulsa «Informe»: sale listo para imprimir o guardar como PDF. En Software también hay un informe propio.', 'tags' => ['informe', 'gerencia', 'pdf', 'reportes']],
             ['p' => '¿Se puede deshacer una baja de equipo?', 'r' => 'No. La baja es definitiva y deja el equipo solo para consulta. Por eso el sistema pide confirmación y el motivo.', 'tags' => ['baja', 'equipo']],
+            ['p' => 'Publiqué un anuncio pero no llegó por correo ni por WhatsApp.', 'r' => 'Revise en Administración › Configuración › «Correo y WhatsApp» que el canal esté con el interruptor «Activo» encendido y, en WhatsApp, que diga «Vinculado» (si sale el código QR, hay que escanearlo de nuevo). También revise que la persona tenga correo o teléfono registrado en su ficha de Personal.', 'tags' => ['anuncios', 'correo', 'whatsapp', 'notificación']],
         ];
     }
 

@@ -40,6 +40,14 @@ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();s._enviar()}
  $('#ch-info').off('click.ch').on('click.ch','[data-acc]',function(){s._accion($(this).data('acc'),$(this).data('id'),$(this).data('val'))});
  $('#ch-emoji-btn').off('click.ch').on('click.ch',function(e){e.stopPropagation();s._panelEmojis()});
  $('#ch-emojis').off('click.ch').on('click.ch','.e',function(){s._insertar($(this).data('e'))}).on('click.ch','.tab',function(){s._panelEmojis($(this).data('c'))});
+ $('#ch-sticker-btn').off('click.ch').on('click.ch',function(e){e.stopPropagation();s._panelStickers()});
+ $('#ch-stickers').off('click.ch').on('click.ch','.st',function(){s._enviarSticker(+$(this).attr('data-id'))})
+  .off('click.ch2').on('click.ch2','.st-del',function(e){e.stopPropagation();s._eliminarSticker(+$(this).attr('data-id'))})
+  .off('click.ch3').on('click.ch3','.st-add',function(){$('#ch-sticker-file').trigger('click')})
+  .off('change.ch').on('change.ch','#ch-sticker-file',function(){if(this.files&&this.files[0])s._subirSticker(this.files[0]);this.value=''});
+ $('#ch-mic-btn').off('click.ch').on('click.ch',function(){s._micClick()});
+ $('#ch-grab-cancelar').off('click.ch').on('click.ch',function(){s._cancelarGrabacion()});
+ $('#ch-grab-enviar').off('click.ch').on('click.ch',function(){s._detenerGrabacion(true)});
  $('#ch-adj-btn').off('click.ch').on('click.ch',function(){$('#ch-adj').trigger('click')});
  $('#ch-adj').off('change.ch').on('change.ch',function(){if(this.files&&this.files[0])s._adjuntar(this.files[0]);this.value=''});
  $('#ch-campo').off('paste.ch').on('paste.ch',function(e){
@@ -63,7 +71,10 @@ ChatBtn.sonido(!ChatBtn.sonido());s._iconoSonido();
 if(ChatBtn.sonido())ChatBtn.sonar();
 });
 s._iconoSonido();
- $(document).off('click.chemo').on('click.chemo',function(e){if(!$(e.target).closest('#ch-emojis,#ch-emoji-btn').length)$('#ch-emojis').addClass('d-none')});
+ $(document).off('click.chemo').on('click.chemo',function(e){
+if(!$(e.target).closest('#ch-emojis,#ch-emoji-btn').length)$('#ch-emojis').addClass('d-none');
+if(!$(e.target).closest('#ch-stickers,#ch-sticker-btn').length)$('#ch-stickers').addClass('d-none');
+});
 s._cargar();
 s.tl=setInterval(function(){if(!$('#ch-lista').length){s._parar();return}s._cargar(true)},8000);
 s.tm=setInterval(function(){if(!$('#ch-msgs').length){s._parar();return}s._msgs()},4000);
@@ -244,11 +255,15 @@ if(m.eliminado){
 h+='<div class="chat-burbuja eliminado"><i class="bi bi-slash-circle"></i> Mensaje eliminado</div></div></div>';
 return h;
 }
-h+='<div class="chat-burbuja">';
+h+='<div class="chat-burbuja'+(m.sticker?' sticker':'')+'">';
 if(m.resp)h+='<div class="chat-cita" data-ir="'+m.resp.id+'"><b>'+esc(m.resp.autor||'')+'</b><span>'+esc(m.resp.texto)+'</span></div>';
-if(m.archivo){
+if(m.sticker){
+var su=BASE_URL+'api/chat/sticker_archivo.php?id='+m.sticker.id;
+h+='<img class="chat-sticker" src="'+su+'" alt="Sticker" loading="lazy">';
+}else if(m.archivo){
 var u=BASE_URL+'api/chat/archivo.php?id='+m.id;
 if(m.archivo.imagen)h+='<a href="'+u+'" target="_blank" rel="noopener noreferrer"><img class="chat-img" src="'+u+'" alt="'+esc(m.archivo.nombre)+'" loading="lazy"></a>';
+else if(m.archivo.audio)h+='<audio controls preload="none" class="chat-audio" src="'+u+'">Su navegador no permite reproducir audio.</audio>';
 else h+='<a class="chat-arch" href="'+u+'&dl=1"><i class="bi bi-file-earmark-arrow-down"></i><span><b>'+esc(m.archivo.nombre)+'</b><small>'+s._tam(m.archivo.size)+' · descargar</small></span></a>';
 }
 if(m.mensaje)h+='<div class="chat-txt">'+s._texto(m)+'</div>';
@@ -289,7 +304,7 @@ Api.post('api/chat/mensajes.php',{accion:'reaccionar',mensaje_id:id,emoji:e}).th
 _responder:function(id){
 var m=this.mm[id];if(!m)return;
 if(this.edit)this._cancelarBarra();
-this.resp={id:id,autor:m.autor,texto:m.mensaje||(m.archivo?'📎 '+m.archivo.nombre:'')};
+this.resp={id:id,autor:m.autor,texto:m.mensaje||(m.sticker?'🧩 Sticker':(m.archivo?(m.archivo.audio?'🎤 Nota de voz':'📎 '+m.archivo.nombre):''))};
 this._barra();$('#ch-campo').focus();
 },
 _editar:function(id){
@@ -312,7 +327,8 @@ this.resp=null;this.edit=0;this.menc={};
 if(!conservar){this.adj=null}
 if(foco){this.adj=null; $('#ch-campo').val('').css('height','auto').focus()}
 if(!conservar&&!foco)$('#ch-campo').val('').css('height','auto');
- $('#ch-emojis,#ch-menciones').addClass('d-none');
+ $('#ch-emojis,#ch-menciones,#ch-stickers').addClass('d-none');
+if(this._rec)this._cancelarGrabacion();
 this._barra();
 },
 /* ✕ de la barra: quita respuesta / adjunto / edición sin perder lo que se está escribiendo (salvo al editar) */
@@ -332,6 +348,7 @@ b.html(h).toggleClass('d-none',!h);
 _adjuntar:function(f){
 if(f.size>10*1024*1024){Toast.warning('El archivo supera los 10 MB');return}
 if(this.edit){Toast.warning('Termine de editar antes de adjuntar');return}
+if(this._rec){Toast.warning('Termine de grabar o cancele la nota de voz antes de adjuntar');return}
 if(!f.name)f=new File([f],'captura.png',{type:f.type||'image/png'});
 this.adj=f;this._barra();$('#ch-campo').focus();
 },
@@ -690,6 +707,122 @@ Modal.cerrar();Toast.success(x.mensaje);s._recargarSala();
 _errores:function(e){
 var er=e&&e.cuerpo&&e.cuerpo.errors;
 if(er){var m=[];Object.keys(er).forEach(function(k){m.push(er[k])});if(m.length)Toast.warning(m.join(' · '))}
+},
+
+/* ---------- stickers: enviar, y agregar/quitar (solo Sistemas) ---------- */
+_panelStickers:function(){
+var s=this,$p=$('#ch-stickers');
+ $('#ch-emojis').addClass('d-none');
+if(!$p.hasClass('d-none')){$p.addClass('d-none');return}
+if(s._stCache){s._pintarStickers();$p.removeClass('d-none');return}
+s._cargarStickers(true);
+},
+_cargarStickers:function(mostrar){
+var s=this;
+ $.getJSON(BASE_URL+'api/chat/stickers.php').done(function(r){
+if(!r||!r.success)return;
+s._stCache=r.data||[];
+s._pintarStickers();
+if(mostrar)$('#ch-stickers').removeClass('d-none');
+});
+},
+_pintarStickers:function(){
+var s=this,lista=s._stCache||[],h='';
+if(s.esSis)h+='<button type="button" class="st-add" title="Agregar sticker"><i class="bi bi-plus-lg"></i></button>';
+lista.forEach(function(st){
+h+='<div class="st-it"><button type="button" class="st" data-id="'+st.id+'" title="Enviar"><img src="'+BASE_URL+'api/chat/sticker_archivo.php?id='+st.id+'" loading="lazy" alt=""></button>'+
+(s.esSis?'<button type="button" class="st-del" data-id="'+st.id+'" title="Quitar"><i class="bi bi-x"></i></button>':'')+'</div>';
+});
+if(!lista.length&&!s.esSis)h+='<div class="text-muted small p-2">Sin stickers disponibles.</div>';
+ $('#ch-stickers').html('<div class="grid">'+h+'</div>'+(s.esSis?'<input type="file" id="ch-sticker-file" class="d-none" accept=".jpg,.jpeg,.png,.gif,.webp">':''));
+},
+_enviarSticker:function(id){
+var s=this;
+if(!s.sid||s._env)return;
+if(s.edit){Toast.warning('Termine de editar antes de enviar un sticker');return}
+ $('#ch-stickers').addClass('d-none');
+s._env=true;
+Api.post('api/chat/mensajes.php',{accion:'enviar',sala_id:s.sid,sticker_id:id}).then(function(){
+s._env=false;s._msgs();s._cargar(true);
+},function(e){s._env=false;s._errores(e)});
+},
+_subirSticker:function(f){
+var s=this,fd=new FormData();fd.append('accion','subir');fd.append('archivo',f,f.name);
+Api.postFiles('api/chat/stickers.php',fd).then(function(r){
+Toast.success(r.mensaje||'Sticker agregado.');s._stCache=null;s._cargarStickers(true);
+},function(e){s._errores(e)});
+},
+_eliminarSticker:function(id){
+var s=this;
+Swal.fire({title:'¿Quitar este sticker?',text:'Ya no se podrá enviar (los mensajes que ya lo enviaron lo siguen mostrando).',icon:'warning',showCancelButton:true,confirmButtonText:'Quitar',cancelButtonText:'No'}).then(function(x){
+if(!x.isConfirmed)return;
+Api.post('api/chat/stickers.php',{accion:'eliminar',id:id}).then(function(r){
+Toast.success(r.mensaje||'Sticker quitado.');s._stCache=null;s._cargarStickers(true);
+},function(e){s._errores(e)});
+});
+},
+
+/* ---------- nota de voz (MediaRecorder): requiere conexión segura (https o localhost) ---------- */
+_micClick:function(){
+var s=this;
+if(s._rec)return;
+if(s.edit){Toast.warning('Termine de editar antes de grabar audio');return}
+if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||typeof MediaRecorder==='undefined'){
+Toast.warning('Este navegador no permite grabar audio (o el sitio no usa una conexión segura: HTTPS).');return;
+}
+navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){s._iniciarGrabacion(stream)})
+.catch(function(){Toast.warning('No se pudo acceder al micrófono. Revise los permisos del navegador.')});
+},
+_iniciarGrabacion:function(stream){
+var s=this,tipos=['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/ogg'],mime='';
+for(var i=0;i<tipos.length;i++)if(window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(tipos[i])){mime=tipos[i];break}
+try{s._mr=mime?new MediaRecorder(stream,{mimeType:mime}):new MediaRecorder(stream)}
+catch(e){Toast.warning('No se pudo iniciar la grabación.');stream.getTracks().forEach(function(t){t.stop()});return}
+s._chunks=[];s._recStream=stream;s._rec=true;s._recSeg=0;
+s._mr.ondataavailable=function(e){if(e.data&&e.data.size)s._chunks.push(e.data)};
+s._mr.start();
+ $('.chat-escribir').addClass('d-none'); $('#ch-grabando').removeClass('d-none'); $('#ch-grab-tiempo').text('0:00');
+s._recT=setInterval(function(){
+s._recSeg++;
+var mnt=Math.floor(s._recSeg/60),sec=s._recSeg%60;
+ $('#ch-grab-tiempo').text(mnt+':'+('0'+sec).slice(-2));
+if(s._recSeg>=120)s._detenerGrabacion(true);     // tope de 2 minutos: se envía sola
+},1000);
+},
+_pararTimerGrab:function(){if(this._recT){clearInterval(this._recT);this._recT=null}},
+_cancelarGrabacion:function(){
+var s=this;
+if(!s._rec)return;
+s._pararTimerGrab();s._rec=false;
+if(s._mr&&s._mr.state!=='inactive'){var st=s._recStream;s._mr.onstop=function(){st.getTracks().forEach(function(t){t.stop()})};s._mr.stop()}
+s._chunks=[];s._mr=null;
+ $('#ch-grabando').addClass('d-none'); $('.chat-escribir').removeClass('d-none');
+},
+_detenerGrabacion:function(enviar){
+var s=this;
+if(!s._rec)return;
+s._pararTimerGrab();s._rec=false;
+var mr=s._mr,st=s._recStream;
+mr.onstop=function(){
+st.getTracks().forEach(function(t){t.stop()});
+ $('#ch-grabando').addClass('d-none'); $('.chat-escribir').removeClass('d-none');
+if(enviar!==false&&s._chunks.length)s._enviarAudio(new Blob(s._chunks,{type:mr.mimeType||'audio/webm'}));
+s._chunks=[];s._mr=null;
+};
+mr.stop();
+},
+_enviarAudio:function(blob){
+var s=this;
+if(!s.sid||s._env)return;
+var ext=(blob.type||'').indexOf('ogg')>=0?'ogg':'webm';
+var f=new File([blob],'nota_voz.'+ext,{type:blob.type||'audio/webm'});
+var fd=new FormData();
+fd.append('accion','enviar');fd.append('sala_id',s.sid);fd.append('mensaje','');fd.append('archivo',f,f.name);
+if(s.resp)fd.append('responde_a',s.resp.id);
+s._env=true;
+Api.postFiles('api/chat/mensajes.php',fd).then(function(){
+s._env=false;s._limpiarCompositor(true);s._msgs();s._cargar(true);
+},function(e){s._env=false;s._errores(e)});
 }
 };
 App.registrar('chat',Chat);

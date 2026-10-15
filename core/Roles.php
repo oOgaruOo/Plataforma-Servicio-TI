@@ -25,6 +25,7 @@ class Roles
         'auditoria'     => 'Auditoría',
         'software'      => 'Software instalado',
         'capacitaciones' => 'Capacitaciones',
+        'rrhh'          => 'RR.HH. ampliado',
     ];
 
     /** Permisos que dan control amplio o borran datos: se resaltan al asignarlos. */
@@ -33,6 +34,7 @@ class Roles
         'personal.eliminar', 'personal.cese', 'equipos.baja',
         'tickets.eliminar', 'mantenimiento.eliminar', 'mantenimiento.aprobar_costo',
         'software.gestionar',
+        'rrhh.gestionar', 'rrhh.eliminar',
     ];
 
     /** Permisos que el codigo usa. Si falta alguno en la BD se crea. [modulo, accion, descripcion] */
@@ -48,6 +50,14 @@ class Roles
         ['capacitaciones', 'ver_area', 'Ver las solicitudes de capacitación de su área', 'tickets.ver_area'],
         ['capacitaciones', 'ver', 'Ver todas las solicitudes de capacitación y la agenda', 'tickets.ver'],
         ['capacitaciones', 'gestionar', 'Revisar, programar y cerrar capacitaciones; administrar los temas', 'tickets.asignar'],
+        // RR.HH. ampliado (Contratos, Vacaciones, Asistencia y Planillas): gestion interna, sin validez tributaria/legal
+        ['rrhh', 'ver', 'Ver contratos, vacaciones, asistencia y planillas de RR.HH.', 'personal.ver'],
+        ['rrhh', 'gestionar', 'Gestionar contratos, vacaciones, asistencia y planillas de RR.HH.', 'personal.editar'],
+        // Requerimiento de personal: quien ya puede crear tickets puede pedir personal para su area; quien ve tickets de su area ve esas solicitudes
+        ['rrhh', 'solicitar', 'Solicitar personal para su área (Requerimientos) y ver las propias', 'tickets.crear'],
+        ['rrhh', 'ver_area', 'Ver los requerimientos de personal de su área', 'tickets.ver_area'],
+        // Separado de "gestionar": borrar (no solo desactivar) del catálogo de Puestos, Equipos de TI y Requisitos
+        ['rrhh', 'eliminar', 'Eliminar puestos, equipos de TI y requisitos del catálogo, y requerimientos de personal ya cerrados (cubiertos o cancelados)', 'rrhh.gestionar'],
     ];
 
     /** Catalogo base del sistema: el codigo los usa (menus, endpoints, avisos). No se pueden eliminar desde la pantalla Permisos. */
@@ -63,6 +73,7 @@ class Roles
         'configuracion.gestionar','usuarios.gestionar','auditoria.ver',
         'software.ver','software.registrar','software.gestionar',
         'capacitaciones.solicitar','capacitaciones.ver_area','capacitaciones.ver','capacitaciones.gestionar',
+        'rrhh.ver','rrhh.gestionar','rrhh.solicitar','rrhh.ver_area','rrhh.eliminar',
     ];
 
     public static function esBase(string $modulo, string $accion): bool

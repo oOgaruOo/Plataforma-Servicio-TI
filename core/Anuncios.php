@@ -118,6 +118,35 @@ class Anuncios
         return array_map('intval', array_column($f, 'id'));
     }
 
+    /**
+     * Datos de contacto de una lista de usuarios, para correo/WhatsApp.
+     * Correo: usuarios.correo > personal.correo_corporativo > personal.correo_personal.
+     * Devuelve [usuario_id => ['nombre'=>.., 'correo'=>?string, 'telefono'=>?string]].
+     */
+    public static function contactos(array $ids): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), fn($i) => $i > 0)));
+        if (!$ids) return [];
+        $in = implode(',', array_fill(0, count($ids), '?'));
+        $filas = Database::get(
+            "SELECT u.id, u.nombre_completo, u.correo AS correo_login,
+                    p.correo_corporativo, p.correo_personal, p.telefono
+             FROM usuarios u LEFT JOIN personal p ON p.id = u.personal_id
+             WHERE u.id IN ($in)", $ids);
+        $out = [];
+        foreach ($filas as $f) {
+            $correo = trim((string) ($f['correo_login'] ?? ''));
+            if ($correo === '') $correo = trim((string) ($f['correo_corporativo'] ?? ''));
+            if ($correo === '') $correo = trim((string) ($f['correo_personal'] ?? ''));
+            $out[(int) $f['id']] = [
+                'nombre'   => $f['nombre_completo'],
+                'correo'   => $correo !== '' ? $correo : null,
+                'telefono' => $f['telefono'] !== null && trim((string) $f['telefono']) !== '' ? trim((string) $f['telefono']) : null,
+            ];
+        }
+        return $out;
+    }
+
     /** Texto legible de los destinatarios: "Todos", "Roles: a, b", "Áreas: x". */
     public static function textoDestino(array $a): string
     {

@@ -20,7 +20,7 @@ class Chat
     public const TIPOS = ['general', 'directo', 'grupo', 'area', 'entre_areas', 'reunion'];
 
     private static bool $ok = false;
-    private const ESQ = 2;                 // sube cuando cambia la estructura (se revisa 1 vez por sesion)
+    private const ESQ = 3;                 // sube cuando cambia la estructura (se revisa 1 vez por sesion)
 
     public const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
     public const EXT_ARCHIVO = [
@@ -30,6 +30,12 @@ class Chat
         'xls' => 'application/vnd.ms-excel', 'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'ppt' => 'application/vnd.ms-powerpoint', 'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
         'zip' => 'application/zip',
+        // Notas de voz grabadas en el navegador (MediaRecorder): no se ofrecen en "Adjuntar", solo las usa el microfono.
+        'webm' => 'audio/webm', 'ogg' => 'audio/ogg',
+    ];
+    /** Catalogo de stickers: siempre imagenes. */
+    public const EXT_STICKER = [
+        'png' => 'image/png', 'webp' => 'image/webp', 'gif' => 'image/gif', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg',
     ];
 
     public static function asegurar(): void
@@ -135,6 +141,21 @@ class Chat
                 usuario_id INT UNSIGNED NOT NULL,
                 emoji VARCHAR(16) NOT NULL,
                 UNIQUE KEY uq_chat_reaccion (mensaje_id, usuario_id, emoji)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        }
+        Esquema::columna('chat_mensajes', 'sticker_id', 'INT UNSIGNED NULL');
+
+        $faltaSt = false;
+        try { Database::run('SELECT id FROM chat_stickers LIMIT 0'); } catch (Throwable $e) { $faltaSt = true; }
+        if ($faltaSt) {
+            Database::run("CREATE TABLE IF NOT EXISTS chat_stickers (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                archivo VARCHAR(80) NOT NULL,
+                nombre VARCHAR(120) NULL,
+                activo TINYINT NOT NULL DEFAULT 1,
+                creado_por INT UNSIGNED NULL,
+                created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+                KEY idx_chat_sticker_activo (activo)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
         }
         self::utf8mb4();
@@ -403,6 +424,8 @@ class Chat
         elseif ($ext === 'pdf') $valido = substr($cab, 0, 4) === '%PDF';
         elseif (in_array($ext, ['docx', 'xlsx', 'pptx', 'zip'], true)) $valido = substr($cab, 0, 2) === 'PK';
         elseif (in_array($ext, ['doc', 'xls', 'ppt'], true)) $valido = substr($cab, 0, 4) === "\xD0\xCF\x11\xE0";
+        elseif ($ext === 'webm') $valido = substr($cab, 0, 4) === "\x1A\x45\xDF\xA3";
+        elseif ($ext === 'ogg') $valido = substr($cab, 0, 4) === 'OggS';
         if (!$valido) throw new RuntimeException('El contenido del archivo no corresponde a su tipo (.' . $ext . ').');
 
         $dir = STORAGE_PATH . '/chat';
@@ -412,6 +435,50 @@ class Chat
         if (!@$mover($f['tmp_name'], $dir . '/' . $nombre)) throw new RuntimeException('No se pudo guardar el archivo.');
 
         return ['archivo' => $nombre, 'nombre' => mb_substr($orig, 0, 160), 'tipo' => self::EXT_ARCHIVO[$ext], 'size' => (int)$f['size']];
+    }
+
+    // ---------------------------------------------------------
+    // Stickers
+    // ---------------------------------------------------------
+
+    public static function rutaSticker(string $nombre): string
+    {
+        return STORAGE_PATH . '/chat/stickers/' . basename($nombre);
+    }
+
+    /**
+     * Guarda la imagen de un sticker nuevo (siempre imagen; nombre aleatorio en storage/chat/stickers,
+     * no accesible por URL: se muestra por api/chat/sticker_archivo.php).
+     * @return array{archivo:string,nombre:string}
+     */
+    public static function guardarSticker(array $f): array
+    {
+        $err = (int)($f['error'] ?? UPLOAD_ERR_NO_FILE);
+        if ($err === UPLOAD_ERR_INI_SIZE || $err === UPLOAD_ERR_FORM_SIZE) throw new RuntimeException('La imagen es demasiado grande.');
+        if ($err !== UPLOAD_ERR_OK) throw new RuntimeException('No se pudo subir la imagen (código ' . $err . ').');
+        if ((int)$f['size'] > 2 * 1024 * 1024) throw new RuntimeException('La imagen supera el máximo de 2 MB.');
+        if ((int)$f['size'] <= 0) throw new RuntimeException('La imagen está vacía.');
+
+        $orig = trim(basename(str_replace('\\', '/', (string)$f['name'])));
+        $ext = strtolower(pathinfo($orig, PATHINFO_EXTENSION));
+        if (!isset(self::EXT_STICKER[$ext])) {
+            throw new RuntimeException('Use una imagen: ' . implode(', ', array_keys(self::EXT_STICKER)) . '.');
+        }
+        $cab = (string)file_get_contents($f['tmp_name'], false, null, 0, 8);
+        $valido = true;
+        if (in_array($ext, ['jpg', 'jpeg'], true)) $valido = substr($cab, 0, 3) === "\xFF\xD8\xFF";
+        elseif ($ext === 'png') $valido = substr($cab, 0, 4) === "\x89PNG";
+        elseif ($ext === 'gif') $valido = substr($cab, 0, 3) === 'GIF';
+        elseif ($ext === 'webp') $valido = substr($cab, 0, 4) === 'RIFF';
+        if (!$valido) throw new RuntimeException('El contenido de la imagen no corresponde a su tipo (.' . $ext . ').');
+
+        $dir = STORAGE_PATH . '/chat/stickers';
+        if (!is_dir($dir) && !@mkdir($dir, 0775, true)) throw new RuntimeException('No se pudo preparar la carpeta de stickers.');
+        $nombre = date('Ymd_His') . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+        $mover = is_uploaded_file($f['tmp_name']) ? 'move_uploaded_file' : 'rename';
+        if (!@$mover($f['tmp_name'], $dir . '/' . $nombre)) throw new RuntimeException('No se pudo guardar la imagen.');
+
+        return ['archivo' => $nombre, 'nombre' => mb_substr($orig, 0, 120)];
     }
 
     // ---------------------------------------------------------

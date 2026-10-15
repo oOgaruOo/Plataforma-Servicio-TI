@@ -191,17 +191,24 @@ var Catalogos = {
     s.tablas = {};
 
     var activa = document.querySelector('.nav-tabs .nav-link.active[data-tipo]');
-    if (activa) s._crearTabla(activa.getAttribute('data-tipo'));
+    if (activa) {
+      var tipoActivo = activa.getAttribute('data-tipo');
+      if (tipoActivo === 'notificaciones') { CorreoCfg.actualizarResumen(); WhatsAppCfg.actualizarResumen(); }
+      else s._crearTabla(tipoActivo);
+    }
 
     document.querySelectorAll('.nav-tabs .nav-link[data-tipo]').forEach(function (t) {
       t.addEventListener('shown.bs.tab', function () {
         var tipo = this.getAttribute('data-tipo');
+        if (tipo === 'notificaciones') { CorreoCfg.actualizarResumen(); WhatsAppCfg.actualizarResumen(); return; }
         if (!s.tablas[tipo]) s._crearTabla(tipo);
         else s.tablas[tipo].columns.adjust();
       });
     });
 
     $('.btn-config-doc').off('click.cat').on('click.cat', function () { Documento.configurar(); });
+    $('#btn-config-correo').off('click.cat').on('click.cat', function () { CorreoCfg.configurar(); });
+    $('#btn-config-whatsapp').off('click.cat').on('click.cat', function () { WhatsAppCfg.configurar(); });
 
     $('.btn-nuevo').off('click.cat').on('click.cat', function () {
       s._formulario($(this).data('tipo'), null);

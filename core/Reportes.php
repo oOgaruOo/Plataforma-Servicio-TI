@@ -9,7 +9,7 @@
 
 class Reportes
 {
-    public const MODULOS = ['resumen', 'tickets', 'mantenimiento', 'inventario', 'software', 'asignaciones', 'personal'];
+    public const MODULOS = ['resumen', 'tickets', 'mantenimiento', 'inventario', 'software', 'asignaciones', 'personal', 'rrhh'];
 
     public const TITULOS = [
         'resumen'       => 'Resumen ejecutivo',
@@ -19,6 +19,7 @@ class Reportes
         'software'      => 'Software y licencias',
         'asignaciones'  => 'Asignaciones y actas',
         'personal'      => 'Personal',
+        'rrhh'          => 'RR.HH. (requerimiento de personal)',
     ];
 
     /**
@@ -32,7 +33,7 @@ class Reportes
         $area = Database::getValue(
             'SELECT p.area_id FROM usuarios u INNER JOIN personal p ON p.id = u.personal_id WHERE u.id = ?', [Auth::userId()]);
         if (!$area) return null;
-        return ['area' => (int)$area, 'modulos' => ['resumen', 'tickets', 'personal']];
+        return ['area' => (int)$area, 'modulos' => ['resumen', 'tickets', 'personal', 'rrhh']];
     }
 
     /** Rango [desde, hasta] validado. 'meses' = mapa Y-m => 0 para armar series sin huecos. */
@@ -527,6 +528,56 @@ class Reportes
         ];
     }
 
+    // =================== RR.HH. (requerimiento de personal) ===================
+    public static function rrhh(array $r, ?int $areaId = null): array
+    {
+        $a = $areaId ? ' AND req.area_id = ?' : '';
+        $pa = $areaId ? [$areaId] : [];
+        $hoy = date('Y-m-d');
+
+        $porEstado = Database::get(
+            "SELECT req.estado, COUNT(*) AS n FROM rrhh_requerimientos req WHERE 1=1$a GROUP BY req.estado", $pa);
+        $porArea = Database::get(
+            "SELECT ar.nombre, COUNT(*) AS n FROM rrhh_requerimientos req INNER JOIN areas ar ON ar.id = req.area_id
+             WHERE 1=1$a GROUP BY ar.id, ar.nombre ORDER BY n DESC", $pa);
+        $creados = Database::get(
+            "SELECT SUBSTR(req.created_at,1,7) AS mes, COUNT(*) AS n FROM rrhh_requerimientos req
+             WHERE req.created_at BETWEEN ? AND ?$a GROUP BY SUBSTR(req.created_at,1,7)", array_merge([$r['ini'], $r['fin']], $pa));
+        $cubiertos = Database::get(
+            "SELECT SUBSTR(req.updated_at,1,7) AS mes, COUNT(*) AS n FROM rrhh_requerimientos req
+             WHERE req.estado = 'cubierto' AND req.updated_at BETWEEN ? AND ?$a GROUP BY SUBSTR(req.updated_at,1,7)",
+            array_merge([$r['ini'], $r['fin']], $pa));
+
+        // Tiempo promedio de cobertura (dias): creado -> cubierto, de los cubiertos en el rango.
+        $cubiertosRango = Database::get(
+            "SELECT req.created_at, req.updated_at FROM rrhh_requerimientos req
+             WHERE req.estado = 'cubierto' AND req.updated_at BETWEEN ? AND ?$a", array_merge([$r['ini'], $r['fin']], $pa));
+        $totDias = 0.0; $nCub = 0;
+        foreach ($cubiertosRango as $c) {
+            if (!$c['created_at'] || !$c['updated_at']) continue;
+            $totDias += max(0, (strtotime($c['updated_at']) - strtotime($c['created_at'])) / 86400);
+            $nCub++;
+        }
+
+        $q = fn(string $sql, array $par = []) => (int) Database::getValue($sql, array_merge($par, $pa));
+        return [
+            'rango' => ['desde' => $r['desde'], 'hasta' => $r['hasta']],
+            'meses' => array_keys($r['meses']),
+            'creados' => self::serie($r['meses'], $creados), 'cubiertos' => self::serie($r['meses'], $cubiertos),
+            'por_estado' => $porEstado, 'por_area' => $porArea,
+            'tarjetas' => [
+                'pendientes'   => $q("SELECT COUNT(*) FROM rrhh_requerimientos req WHERE req.estado = 'pendiente'$a"),
+                'en_proceso'   => $q("SELECT COUNT(*) FROM rrhh_requerimientos req WHERE req.estado = 'en_proceso'$a"),
+                'en_curso'     => $q("SELECT COUNT(*) FROM rrhh_requerimientos req WHERE req.estado IN ('pendiente','en_proceso')$a"),
+                'atrasados'    => $q("SELECT COUNT(*) FROM rrhh_requerimientos req WHERE req.estado IN ('pendiente','en_proceso')
+                                      AND req.fecha_limite IS NOT NULL AND req.fecha_limite < ?$a", [$hoy]),
+                'cubiertos'    => $q("SELECT COUNT(*) FROM rrhh_requerimientos req WHERE req.estado = 'cubierto'$a"),
+                'cancelados'   => $q("SELECT COUNT(*) FROM rrhh_requerimientos req WHERE req.estado = 'cancelado'$a"),
+                'promedio_dias_cobertura' => $nCub ? round($totDias / $nCub, 1) : null,
+            ],
+        ];
+    }
+
     // =================== RESUMEN EJECUTIVO ===================
     /** Una mirada para gerencia: indicadores de todos los modulos, tendencia y observaciones. */
     public static function resumen(array $r, ?int $areaId = null): array
@@ -639,6 +690,22 @@ class Reportes
                 $areaId ? [$areaId] : []);
             return ['Personal', ['DNI', 'Nombre', 'Área', 'Cargo', 'Estado', 'Ingreso', 'Cese', 'Equipos asignados'],
                 array_map(fn($x) => [$x['dni'], $x['nombre'], $x['area'], $x['cargo'], $x['estado'], $x['fecha_ingreso'], $x['fecha_cese'], $x['equipos']], $d)];
+        }
+        if ($modulo === 'rrhh') {
+            $a = $areaId ? ' AND req.area_id = ?' : '';
+            $d = Database::get(
+                "SELECT req.codigo, req.puesto, ar.nombre AS area, CONCAT(p.nombres,' ',p.apellidos) AS solicitante,
+                        req.cantidad, req.tipo_contrato, req.estado, req.fecha_limite, req.created_at, req.updated_at
+                 FROM rrhh_requerimientos req
+                 LEFT JOIN areas ar ON ar.id = req.area_id
+                 LEFT JOIN usuarios u ON u.id = req.solicitante_usuario_id
+                 LEFT JOIN personal p ON p.id = u.personal_id
+                 WHERE 1=1$a ORDER BY req.created_at DESC",
+                $areaId ? [$areaId] : []);
+            return ['RR.HH. (requerimiento de personal)',
+                ['Código', 'Puesto', 'Área', 'Solicitante', 'Cantidad', 'Tipo de contrato', 'Estado', 'Fecha límite', 'Creado', 'Actualizado'],
+                array_map(fn($x) => [$x['codigo'], $x['puesto'], $x['area'], $x['solicitante'], $x['cantidad'], $x['tipo_contrato'],
+                    Requerimientos::ESTADOS[$x['estado']][0] ?? $x['estado'], $x['fecha_limite'], $x['created_at'], $x['updated_at']], $d)];
         }
         if ($modulo === 'software') {
             $c = self::software($r)['cumplimiento'];
