@@ -218,6 +218,7 @@ require_once __DIR__ . '/core/bootstrap.php';
 <script src="<?= BASE_URL ?>assets/js/app/asignaciones.js?v=<?= $ver ?>"></script>
 <script src="<?= BASE_URL ?>assets/js/app/proyectos.js?v=<?= $ver ?>"></script>
 <script src="<?= BASE_URL ?>assets/js/app/chat.js?v=<?= $ver ?>"></script>
+<script src="<?= BASE_URL ?>assets/js/app/chat_auditoria.js?v=<?= $ver ?>"></script>
 <script src="<?= BASE_URL ?>assets/js/app/actas.js?v=<?= $ver ?>"></script>
 <script src="<?= BASE_URL ?>assets/js/app/actas_branding.js?v=<?= $ver ?>"></script>
 <script src="<?= BASE_URL ?>assets/js/app/anuncios.js?v=<?= $ver ?>"></script>
@@ -227,6 +228,7 @@ require_once __DIR__ . '/core/bootstrap.php';
 <script src="<?= BASE_URL ?>assets/js/app/licencia.js?v=<?= $ver ?>"></script>
 <script src="<?= BASE_URL ?>assets/js/app/contratos.js?v=<?= $ver ?>"></script>
 <script src="<?= BASE_URL ?>assets/js/app/vacaciones.js?v=<?= $ver ?>"></script>
+<script src="<?= BASE_URL ?>assets/js/app/ausencias.js?v=<?= $ver ?>"></script>
 <script src="<?= BASE_URL ?>assets/js/app/asistencia.js?v=<?= $ver ?>"></script>
 <script src="<?= BASE_URL ?>assets/js/app/planillas.js?v=<?= $ver ?>"></script>
 <script src="<?= BASE_URL ?>assets/js/app/requerimientos.js?v=<?= $ver ?>"></script>

@@ -627,3 +627,97 @@ SIGTI ahora se entrega UNA INSTALACION POR EMPRESA y funciona con una licencia (
 - No hace falta tocar la base de datos ni reinstalar nada; en el navegador pulse Ctrl+F5.
 - Modificados: core/Contratos.php, core/Guias.php, api/contratos/gestionar.php,
   assets/js/app/{contratos,requerimientos}.js.
+
+== 15/10/2026 - RR.HH.: campo "Fecha límite" (Solicitar personal) y nuevo submodulo de Permisos
+   y licencias dentro de Asistencia, con historial de marcado ==
+1) PEDIDO 1: en "Solicitar personal", el campo "Plazo para contratar y firmar documentos" quedaba
+   demasiado largo al mostrarse (en el detalle del requerimiento salia apretado, como "Plazo para
+   contratar y firmar: 31/10/2026"). Se renombro a "Fecha límite" en el formulario, en el detalle y
+   en los mensajes de validacion. Para no perder el detalle que daba el nombre largo, el texto de
+   ayuda debajo del campo ahora dice "Fecha límite para tener a la persona contratada y con
+   documentos firmados."
+2) PEDIDO 2 (dos cosas pedidas sobre el submodulo Asistencia):
+   a) Historial: antes no habia forma de ver, para una persona (o para todas), su entrada/salida de
+      varios dias atras ni el tipo de marca de cada dia. Se agrego una pestaña nueva "Historial"
+      dentro de RR.HH. > Asistencia, con filtro por persona, por area y por rango de fechas (hasta
+      2 anios), que muestra dia por dia la hora de entrada, salida a almorzar, regreso de almuerzo
+      y salida, ademas del tipo de marca (incluye las automaticas, marcadas con un icono).
+   b) Permisos, dia libre y compensacion: se agrego un submodulo nuevo, "Permisos y licencias"
+      (menu RR.HH.), para solicitar y aprobar/rechazar/cancelar estos 3 tipos de ausencia del
+      personal, con el mismo flujo que ya existia para Vacaciones (RR.HH. aprueba; no es
+      autoservicio). Una solicitud APROBADA se refleja sola en el marcado diario de Asistencia ese
+      dia (igual que ya pasaba con las vacaciones aprobadas); si una persona tiene vacaciones Y un
+      permiso aprobados el mismo dia, se muestran las vacaciones (y si alguien la marca a mano ese
+      dia, la marca manual manda siempre sobre cualquiera de las dos). Al crear una solicitud que se
+      cruza con unas vacaciones (pendientes o aprobadas) de la misma persona, el sistema avisa del
+      cruce pero no bloquea, porque una persona puede llegar a necesitar ambas cosas.
+3) Se agrego tambien un aviso en el Dashboard cuando hay solicitudes de permiso/dia libre/compensacion
+   pendientes de revisar, igual que ya existia para vacaciones y contratos.
+4) Probado con 100 verificaciones automaticas nuevas (crear/aprobar/rechazar/cancelar cada tipo,
+   validaciones, cruces con vacaciones, permisos de acceso, y el nuevo Historial con sus filtros y
+   validaciones de rango de fechas) + se repitieron las 198 verificaciones de los modulos de RR.HH.
+   y Requerimiento de personal para confirmar que nada se rompio — 298/298 en total.
+- No hace falta tocar la base de datos ni reinstalar nada; las tablas nuevas se crean solas la
+  primera vez que se abre el modulo. En el navegador pulse Ctrl+F5.
+- Nuevos: core/Ausencias.php, api/ausencias/{listar,gestionar,resumen}.php,
+  assets/js/app/ausencias.js, views/rrhh/ausencias.php, api/asistencia/historial.php.
+- Modificados: core/{Asistencia,Dashboard,Licencia,Guias}.php, api/requerimientos/{gestionar,
+  solicitudes}.php, assets/js/app/{requerimientos,asistencia}.js, assets/js/core/{menu,router,
+  sistema}.js, views/rrhh/asistencia.php, index.php.
+
+== 15/10/2026 - Planillas: boton "Agregar persona", y nueva pantalla "Auditoria de chat" ==
+1) PEDIDO 1: en Planillas, al registrar a una persona no habia boton para agregarla al periodo (o que
+   llamara desde el personal ya registrado) distinto de "Generar / recalcular" (que es para TODO el
+   personal activo a la vez). Se agrego el boton con icono de persona, junto a "Generar / recalcular":
+   abre un selector del personal ya registrado, muestra el contrato vigente de la persona elegida (el
+   sueldo que se usara) y la agrega (o recalcula, si ya tenia una fila abierta en ese periodo) sin
+   duplicar. Sigue exigiendo que la persona tenga un contrato vigente, igual que "Generar / recalcular";
+   si la planilla de esa persona en ese periodo ya esta CERRADA, pide reabrirla primero.
+2) PEDIDO 2: salio un caso real que necesitaba revisar (auditar) el chat y no habia una forma de verlo
+   completo: el area de Sistemas solo podia supervisar los chats 1 a 1 (persona con persona), no la sala
+   General, los grupos, los canales de area ni las reuniones. Se agrego una pantalla nueva, "Auditoria de
+   chat" (menu Administracion, visible solo para el area de Sistemas), con el listado de TODAS las
+   conversaciones activas (buscar por nombre, filtrar por tipo) y el historial completo de la que se
+   elija, con filtro por rango de fechas y los mismos adjuntos, stickers y notas de voz que en el chat
+   normal. No se recupera el texto de mensajes ya borrados (sigue mostrandose "Mensaje eliminado"); eso
+   queda fuera de este alcance si mas adelante se necesita.
+3) BUG ADICIONAL ENCONTRADO Y CORREGIDO de paso: una instalacion con el chat de una version MUY antigua
+   (de antes de que existiera la columna "created_at" en la tabla de conversaciones) se habria quedado
+   sin esa columna para siempre, porque la migracion automatica del chat no la completaba. No afecta a
+   quien ya viene usando el Chat interno actual con normalidad; se corrige de paso para que la nueva
+   Auditoria de chat funcione tambien en una instalacion asi, sin tener que hacer nada a mano.
+4) Probado con 39 verificaciones automaticas nuevas (24 de "Agregar persona" en Planillas + 15 de
+   Auditoria de chat: permisos, ver cualquier tipo de conversacion, nombres de chats directos, adjuntos,
+   paginas de mensajes mas antiguos, filtro por fechas y el registro en Auditoria de quien abrio que
+   conversacion) + se repitieron las pruebas del Chat interno (0 fallas) para confirmar que nada se rompio.
+- No hace falta tocar la base de datos ni reinstalar nada; la columna nueva del chat se completa sola la
+  primera vez que se usa. En el navegador pulse Ctrl+F5.
+- Nuevos: api/planillas/agregar.php, api/chat/auditoria.php, views/chat/auditoria.php,
+  assets/js/app/chat_auditoria.js.
+- Modificados: core/{Planillas,Chat,Licencia,Guias}.php, api/chat/archivo.php, views/rrhh/planillas.php,
+  assets/js/app/planillas.js, assets/js/core/{menu,router,sistema}.js, index.php.
+
+== 16/10/2026 - Auditoria por area, permiso propio para auditar el Chat, y plantilla de roles por area ==
+1) PEDIDO 1: cada jefe de area pedia ver la Auditoria solo de su propia area, sin mezclarse con las
+   demas (como ya pasa en Tickets, RRHH y Reportes). Se agrego el permiso "auditoria.ver_area": quien lo
+   tenga (sin tener el "auditoria.ver" completo) ve en la pantalla de Auditoria y en su resumen solo las
+   acciones hechas por el personal de SU area (segun el area de la persona que realizo la accion, no la
+   del registro afectado). El acceso total ("auditoria.ver") sigue viendo todo, sin cambios.
+2) PEDIDO 2: al revisar los permisos de los modulos nuevos se encontro que "Auditoria de chat" (agregada
+   la vez pasada) no tenia permiso propio: solo la veian Sistemas o quien tenia "usuarios.gestionar"
+   (el permiso de Roles), lo cual no se podia asignar aparte. Se agrego el permiso propio "chat.auditoria":
+   ahora se puede dar a cualquier rol desde Roles, sin tener que darle el permiso completo de gestionar
+   usuarios. Sistemas sigue viendo todo igual que antes.
+3) PEDIDO 3: en Roles se pedia una forma de armar un "rol maestro" por area y aplicarlo segun el cargo.
+   Se agrego la pestaña "Plantilla por area" en Permisos (menu Administracion > Permisos): elige un area
+   de origen (la que ya tiene bien configurado su "Jefe de area" y/o "Personal") y un area de destino, y
+   copia esos permisos de un area a otra en un clic (reemplazando los que tuviera el area de destino, sin
+   tener que marcarlos permiso por permiso cada vez que se crea un area nueva). Requiere el permiso de
+   Roles ("usuarios.gestionar").
+4) Probado con 32 verificaciones automaticas nuevas (17 de Auditoria por area en listar/resumen/exportar
+   + 15 de Permisos: Chat con permiso propio y Plantilla por area) + se repitieron las pruebas de
+   Auditoria, Chat y Roles para confirmar que nada se rompio (0 fallas).
+- No hace falta tocar la base de datos ni reinstalar nada. En el navegador pulse Ctrl+F5.
+- Modificados: core/{Roles,Chat,AuditoriaConsulta}.php, api/auditoria/{listar,exportar,resumen}.php,
+  api/chat/{auditoria,archivo}.php, api/configuracion/permisos.php, views/{auditoria/lista,
+  chat/auditoria,permisos/lista}.php, assets/js/{core/menu,app/permisos}.js.
