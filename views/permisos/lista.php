@@ -37,6 +37,7 @@ if (!$puede):
         <li class="nav-item"><button class="nav-link active" id="pm-t-cat" data-bs-toggle="tab" data-bs-target="#pm-p-cat" type="button" role="tab" data-vista="cat"><i class="bi bi-list-check me-1"></i>Catálogo</button></li>
         <li class="nav-item"><button class="nav-link" id="pm-t-mat" data-bs-toggle="tab" data-bs-target="#pm-p-mat" type="button" role="tab" data-vista="mat"><i class="bi bi-grid-3x3-gap me-1"></i>Matriz por rol</button></li>
         <li class="nav-item"><button class="nav-link" id="pm-t-aj" data-bs-toggle="tab" data-bs-target="#pm-p-aj" type="button" role="tab" data-vista="aj"><i class="bi bi-person-gear me-1"></i>Ajustes por usuario</button></li>
+        <li class="nav-item"><button class="nav-link" id="pm-t-area" data-bs-toggle="tab" data-bs-target="#pm-p-area" type="button" role="tab" data-vista="area"><i class="bi bi-diagram-3 me-1"></i>Plantilla por área</button></li>
       </ul>
     </div>
     <div class="card-body tab-content">
@@ -92,6 +93,33 @@ if (!$puede):
         <div class="text-muted small mt-3">
           <i class="bi bi-info-circle"></i> Son excepciones: un permiso <b>concedido</b> a una persona además de los de su rol, o un permiso del rol que se le <b>quitó</b>.
           Los ajustes marcados «sin efecto» ya no cambian nada y se pueden quitar.
+        </div>
+      </div>
+
+      <!-- ===== PLANTILLA POR AREA ===== -->
+      <div class="tab-pane fade" id="pm-p-area" role="tabpanel">
+        <div class="row g-2 mb-2 align-items-end">
+          <div class="col-12 col-md-4">
+            <label class="form-label small mb-1">Área de origen <span class="text-muted">(la que ya está bien configurada)</span></label>
+            <select id="pa-origen" class="form-select form-select-sm"><option value="">Elija un área...</option></select>
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label small mb-1">Área de destino</label>
+            <select id="pa-destino" class="form-select form-select-sm"><option value="">Elija un área...</option></select>
+          </div>
+          <div class="col-12 col-md-4">
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="pa-jefe" checked><label class="form-check-label small" for="pa-jefe">Copiar «Jefe de área»</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="pa-personal" checked><label class="form-check-label small" for="pa-personal">Copiar «Personal»</label></div>
+          </div>
+        </div>
+        <button id="btn-copiar-area" class="btn btn-primary btn-sm mb-2"><i class="bi bi-arrow-left-right"></i> Copiar plantilla</button>
+        <div id="pa-resumen" class="small mb-2"></div>
+        <div id="pa-tabla" class="small text-muted">Cargando…</div>
+        <div class="text-muted small mt-3">
+          <i class="bi bi-info-circle"></i> Cada área tiene sus propios roles automáticos <code>jefe_&lt;área&gt;</code> y
+          <code>personal_&lt;área&gt;</code>, que nacen <b>vacíos</b> de permisos. Esto copia (reemplazando) los permisos
+          de esos roles de un área a otra, para no marcarlos uno por uno en cada área nueva. Puede ajustarlos después en
+          «Matriz por rol».
         </div>
       </div>
     </div>

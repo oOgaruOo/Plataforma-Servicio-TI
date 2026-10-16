@@ -2,7 +2,8 @@
 // @autor Ing. Alejandro Aldo Meneses Aliaga · ORCID 0000-0003-1788-1978 · Código de autor: SIGTI-DEV-AMA-2026 · © 2026
 require_once __DIR__ . '/../../core/guard_vista.php';
 $puede = Auth::can('auditoria', 'ver');
-if (!$puede):
+$puedeArea = $puede || Auth::can('auditoria', 'ver_area');
+if (!$puedeArea):
 ?>
   <div class="alert alert-warning mb-0"><i class="bi bi-shield-lock"></i> Sin permisos de auditoría.</div>
 <?php else:
@@ -58,7 +59,15 @@ $etq = AuditoriaConsulta::ACCIONES;
         <div class="col-6 col-md-2">
           <select id="auf-usuario" class="form-select form-select-sm">
             <option value="">Todos los usuarios</option>
-            <?php foreach (Database::get("SELECT id, nombre_completo FROM usuarios ORDER BY nombre_completo") as $u): ?>
+            <?php
+            $sqlUsu = "SELECT id, nombre_completo FROM usuarios ORDER BY nombre_completo";
+            $pUsu = [];
+            if (!$puede) {   // ver_area: solo personas de su propia area en el filtro
+                $sqlUsu = "SELECT u.id, u.nombre_completo FROM usuarios u INNER JOIN personal p ON p.id = u.personal_id
+                           WHERE p.area_id = ? ORDER BY u.nombre_completo";
+                $pUsu = [AuditoriaConsulta::alcance()['area_id'] ?? 0];
+            }
+            foreach (Database::get($sqlUsu, $pUsu) as $u): ?>
               <option value="<?= (int)$u['id'] ?>"><?= htmlspecialchars($u['nombre_completo']) ?></option>
             <?php endforeach; ?>
           </select>

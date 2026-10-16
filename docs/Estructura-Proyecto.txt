@@ -1,0 +1,79 @@
+SIGTI — Plataforma de Servicio TI · Estructura del proyecto
+Autor: Ing. Alejandro Aldo Meneses Aliaga · ORCID 0000-0003-1788-1978 · SIGTI-DEV-AMA-2026
+(generado a partir de los archivos reales de la carpeta)
+
+index.php        Página única (shell + menú + login)
+acta.php         Acta pública para firma por enlace
+LICENSE · AUTORIA.md · LICENCIAMIENTO.md · CITATION.cff · codemeta.json
+
+config/  — config.php (base de datos, zona horaria, rutas). Se ajusta una vez por instalación.
+   config.php
+
+core/  — Clases y reglas de negocio (autocarga). Licencia.php, Rubros.php y Empresa.php: licenciamiento y adaptación por empresa.
+   ActaCuerpo.php · ActaPerfiles.php · ActaPlantilla.php · Actas.php · Anuncios.php · Apellidos.php · Auditoria.php · AuditoriaConsulta.php · Auth.php · Autor.php · Capacitaciones.php · Carnets.php · Chat.php · CodigoUsuario.php · ColoresLogo.php · Correlativo.php · Csrf.php · Cumpleanos.php · Dashboard.php · Database.php · Destinos.php · Documento.php · Documentos.php · Empresa.php · Esquema.php · EtiquetasPlantillas.php · FotoImagen.php · Geolocalizacion.php · Guias.php · Licencia.php · MantenimientoFlujo.php · MotorDiario.php · Notificador.php · Programados.php · Rastreo.php · Reportes.php · Response.php · Roles.php · Rubros.php · Software.php · TicketFlujo.php · Upload.php · Validator.php · bootstrap.php · crearRolesArea.php · guard_vista.php
+
+db/  — sigti.sql (instalación nueva) y migraciones/ (solo para actualizar instalaciones anteriores).
+   db/: sigti.sql
+   db/migraciones/: 2026-10-02-auditoria-contexto.sql · 2026-10-06-columnas-faltantes.sql · 2026-10-07-apellidos-paterno-materno.sql · 2026-10-07-carnets.sql · 2026-10-07-codigo-usuario-etiquetas.sql · 2026-10-07-fecha-nacimiento.sql · 2026-10-07-proveedores-documento.sql · 2026-10-07-roles.sql · 2026-10-09-cierre-tickets-mantenimiento.sql · 2026-10-09-inventario-destinos.sql · 2026-10-09-rastreo-mantenimiento.sql · 2026-10-10-preventivos-ciclo.sql · 2026-10-10-proyectos-obras.sql · 2026-10-12-actas-por-tipo.sql · 2026-10-12-anuncios-permisos-auditoria.sql · 2026-10-12-capacitaciones.sql · 2026-10-12-chat.sql · 2026-10-12-licencias-activacion.sql · 2026-10-12-software.sql · 2026-10-12-tablas-base.sql · LEEME.txt
+
+api/  — Endpoints JSON (uno por acción). Patrón: bootstrap → Auth::check → permiso → Csrf::validate → Response::ok/error.
+   api/actas/: archivo.php · encabezado.php · firmar.php · formatos.php · generar.php · listar.php · pendientes.php · perfiles.php · tipos.php
+   api/anuncios/: cerrar.php · guardar.php · listar.php
+   api/asignaciones/: devolver.php · editar.php · eliminar.php · entregar.php · listar.php · solicitudes.php · stats.php
+   api/auditoria/: exportar.php · listar.php · resumen.php
+   api/auth/: avatar.php · foto-login.php · login.php · logout.php · perfil.php
+   api/capacitaciones/: gestionar.php · resumen.php · solicitudes.php · temas.php
+   api/carnets/: actualizar.php · estado.php · generar.php · listar.php · revertir.php
+   api/catalogos/: consulta.php · eliminar.php · guardar.php · listar.php · permisos.php · select.php · toggle.php
+   api/chat/: archivo.php · mensajes.php · resumen.php · reuniones.php · salas.php
+   api/configuracion/: consulta-documentos.php · logo-publico.php · logo.php · permisos.php
+   api/dashboard/: graficos.php · indicadores.php · para-atencion.php
+   api/equipos/: accesorio.php · accesorios-tipos.php · baja.php · detalle.php · exportar.php · guardar.php · importar.php · licencia.php · listar.php · seguimiento.php · select.php · stats.php · ubicaciones.php
+   api/etiquetas/: plantillas.php
+   api/guias/: catalogo.php
+   api/licencia/: activar.php · estado.php · modulos.php · rubro.php
+   api/mantenimiento/: actualizar.php · detalle.php · eliminar.php · estado.php · evidencia.php · finalizar.php · guardar.php · listar.php · percance.php · programados.php · repuesto.php · stats.php · tickets-disponibles.php · ver-archivo.php
+   api/menu/: insignias.php
+   api/notificaciones/: contar.php · listar.php · marcar.php
+   api/personal/: cese.php · checklist.php · cumpleanos.php · detalle.php · eliminar.php · foto.php · guardar.php · listar.php · procesar-cese.php
+   api/preventivos/: motor.php
+   api/proyectos/: detalle.php · estado.php · guardar.php · listar.php
+   api/rastreo/: agente.php · checkin.php · gestionar.php · panel.php · sedes.php
+   api/reportes/: datos.php · exportar.php
+   api/software/: catalogo.php · equipo.php · equipos.php · exportar.php · factura.php · instalaciones.php · instalar.php · licencias.php · resumen.php
+   api/tickets/: adjunto.php · asignar.php · comentario.php · descargar.php · detalle.php · eliminar.php · estado.php · finalizar.php · guardar.php · listar.php · prioridad.php · stats.php · subcategorias.php
+   api/usuarios/: estado.php · foto.php · guardar.php · listar.php · password.php · permisos-efectivos.php · permisos.php · roles-permisos.php · roles.php
+
+views/  — Vistas parciales que carga el router (una carpeta por módulo).
+   views/actas/: lista.php
+   views/asignaciones/: lista.php
+   views/auditoria/: lista.php
+   views/capacitaciones/: lista.php
+   views/carnets/: imprimir.php · lista.php
+   views/chat/: principal.php
+   views/configuracion/: principal.php
+   views/dashboard/: principal.php
+   views/equipos/: etiquetas.php · lista.php · seguimiento.php
+   views/etiquetas/: plantillas.php
+   views/guias/: carnets.php · etiquetas.php · principal.php · ver.php
+   views/licencia/: principal.php
+   views/mantenimiento/: lista.php
+   views/permisos/: lista.php
+   views/personal/: etiquetas.php · lista.php
+   views/proyectos/: lista.php
+   views/rastreo/: guia.php
+   views/reportes/: informe.php · principal.php
+   views/software/: informe.php · lista.php
+   views/tickets/: lista.php
+   views/usuarios/: lista.php
+
+assets/  — Interfaz: css/ y js/ (core/ = base: app, menú, router, ajax, chat, sistema…; app/ = un archivo por módulo).
+   assets/css/: sigti-fx.css · sigti.css
+   assets/js/app/: actas.js · actas_branding.js · anuncios.js · asignaciones.js · auditoria.js · capacitaciones.js · carnets.js · catalogos.js · chat.js · equipos.js · equipos_import.js · etiquetas_diseno.js · guias.js · licencia.js · mantenimiento.js · permisos.js · personal.js · proyectos.js · reportes.js · roles.js · seguimiento.js · software.js · tickets.js · usuarios.js
+   assets/js/core/: ajax.js · app.js · autor.js · chat.js · datatables.js · documento.js · foto.js · fx.js · loader.js · menu.js · notificaciones.js · router.js · sistema.js · toast.js · visor.js
+
+docs/  — Documentación.
+   Estructura-Proyecto.txt · MATRIZ_ROLES_PERMISOS_SIGTI.md
+
+storage/  — Archivos de la empresa (fotos, logo, adjuntos, actas firmadas…). No se sube a GitHub; no es accesible por URL.
+   actas-pdf · adjuntos-tickets · agente-rastreo.bat · branding · cotizaciones · fotos-usuarios

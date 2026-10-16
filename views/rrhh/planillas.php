@@ -27,7 +27,12 @@ if (!$puedeVer):
         <div class="text-muted small mb-3"><i class="bi bi-info-circle"></i> Planilla referencial de uso interno: NO reemplaza PLAME, boletas electrónicas ni un sistema contable oficial.</div>
         <div class="row g-2 mb-3 align-items-end">
           <div class="col-md-3"><label class="form-label small mb-1">Periodo</label><input type="month" class="form-control form-control-sm" id="pla-periodo"></div>
-          <?php if ($puedeGestionar): ?><div class="col-md-3"><button class="btn btn-sm btn-primary w-100" id="pla-btn-generar"><i class="bi bi-gear me-1"></i>Generar / recalcular</button></div><?php endif; ?>
+          <?php if ($puedeGestionar): ?>
+          <div class="col-md-3 d-flex gap-2">
+            <button class="btn btn-sm btn-primary w-100" id="pla-btn-generar"><i class="bi bi-gear me-1"></i>Generar / recalcular</button>
+            <button class="btn btn-sm btn-outline-primary text-nowrap" id="pla-btn-agregar" title="Agregar a una persona que quedo afuera, o que recien se incorporo en este periodo"><i class="bi bi-person-plus"></i></button>
+          </div>
+          <?php endif; ?>
           <div class="col-md-6 d-flex gap-2 flex-wrap">
             <div class="pla-kpi flex-fill"><div class="text-muted small">Generadas</div><div class="n" id="pla-k-gen">—</div></div>
             <div class="pla-kpi flex-fill"><div class="text-muted small">Cerradas</div><div class="n text-success" id="pla-k-cerr">—</div></div>
