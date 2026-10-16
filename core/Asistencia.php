@@ -12,6 +12,7 @@ class Asistencia
     public const TIPOS = [
         'normal' => ['Normal', 'verde'], 'tardanza' => ['Tardanza', 'ambar'], 'falta' => ['Falta', 'rojo'],
         'falta_justificada' => ['Falta justificada', 'azul'], 'permiso' => ['Permiso', 'azul'],
+        'dia_libre' => ['Día libre', 'azul'], 'compensacion' => ['Compensación', 'azul'],
         'vacaciones' => ['Vacaciones', 'azul'],
     ];
 
@@ -50,6 +51,7 @@ class Asistencia
         Esquema::columna('rrhh_asistencia', 'hora_entrada_almuerzo', 'VARCHAR(5) NULL');
         Esquema::columna('rrhh_asistencia', 'hora_salida', 'VARCHAR(5) NULL');
         if (class_exists('Vacaciones')) Vacaciones::asegurar(); // dia()/resumenHoy()/resumenPersona() cruzan con vacaciones aprobadas
+        if (class_exists('Ausencias')) Ausencias::asegurar();   // idem, con permisos/dias libres/compensaciones aprobados
         self::$ok = true;
     }
 
@@ -68,26 +70,31 @@ class Asistencia
     /**
      * Personal activo (de un area, opcional) con su marca de ese dia (null si aun no se marco).
      * Si la persona tiene una solicitud de vacaciones APROBADA que cubre ese dia y no tiene marca manual,
-     * se devuelve ya como 'vacaciones' (automatico): no hace falta que nadie la marque a mano.
+     * se devuelve ya como 'vacaciones' (automatico); lo mismo si tiene un permiso/dia libre/compensacion
+     * APROBADO de Ausencias (se devuelve con el tipo que corresponda: permiso, dia_libre o compensacion).
+     * No hace falta que nadie la marque a mano en ninguno de los dos casos. Si por alguna razon se cruzan
+     * ambas cosas el mismo dia, gana vacaciones (caso raro: nada impide hoy pedir las dos cosas a la vez).
      */
     public static function dia(string $fecha, ?int $areaId = null): array
     {
-        $w = ''; $params = [$fecha, $fecha];
+        $w = ''; $params = [$fecha, $fecha, $fecha];
         if ($areaId) { $w = ' AND p.area_id = ?'; $params[] = $areaId; }
         $filas = Database::get(
             "SELECT p.id AS personal_id, p.nombres, p.apellidos, p.dni, a.nombre AS area,
                     r.id AS reg_id, r.tipo, r.hora_entrada, r.hora_salida_almuerzo, r.hora_entrada_almuerzo, r.hora_salida,
                     r.observacion, r.origen,
-                    v.id AS vacacion_id
+                    v.id AS vacacion_id,
+                    u.id AS ausencia_id, u.tipo AS ausencia_tipo
              FROM personal p LEFT JOIN areas a ON a.id = p.area_id
              LEFT JOIN rrhh_asistencia r ON r.personal_id = p.id AND r.fecha = ?
              LEFT JOIN rrhh_vacaciones v ON v.personal_id = p.id AND v.estado = 'aprobada' AND ? BETWEEN v.fecha_inicio AND v.fecha_fin
+             LEFT JOIN rrhh_ausencias u ON u.personal_id = p.id AND u.estado = 'aprobada' AND ? BETWEEN u.fecha_inicio AND u.fecha_fin
              WHERE p.estado = 'activo'$w ORDER BY p.apellidos, p.nombres",
             $params
         );
         foreach ($filas as &$f) {
-            $f['automatico'] = !$f['tipo'] && $f['vacacion_id'] ? true : false;
-            $f['tipo_efectivo'] = $f['tipo'] ?: ($f['vacacion_id'] ? 'vacaciones' : null);
+            $f['automatico'] = !$f['tipo'] && ($f['vacacion_id'] || $f['ausencia_id']) ? true : false;
+            $f['tipo_efectivo'] = $f['tipo'] ?: ($f['vacacion_id'] ? 'vacaciones' : ($f['ausencia_id'] ? $f['ausencia_tipo'] : null));
         }
         unset($f);
         return $filas;
@@ -116,7 +123,8 @@ class Asistencia
         return $n;
     }
 
-    /** Resumen de una persona en un rango: cuenta la marca explicita, o 'vacaciones' automatico si no hay marca y tiene vacaciones aprobadas ese dia. */
+    /** Resumen de una persona en un rango: cuenta la marca explicita, o el tipo automatico (vacaciones / permiso /
+     *  dia_libre / compensacion) si no hay marca y tiene algo aprobado que cubra ese dia. */
     public static function resumenPersona(int $personalId, string $desde, string $hasta): array
     {
         $marcas = Database::get('SELECT fecha, tipo FROM rrhh_asistencia WHERE personal_id = ? AND fecha BETWEEN ? AND ?', [$personalId, $desde, $hasta]);
@@ -127,8 +135,12 @@ class Asistencia
             "SELECT fecha_inicio, fecha_fin FROM rrhh_vacaciones WHERE personal_id = ? AND estado = 'aprobada' AND fecha_fin >= ? AND fecha_inicio <= ?",
             [$personalId, $desde, $hasta]
         );
+        $aus = Database::get(
+            "SELECT tipo, fecha_inicio, fecha_fin FROM rrhh_ausencias WHERE personal_id = ? AND estado = 'aprobada' AND fecha_fin >= ? AND fecha_inicio <= ?",
+            [$personalId, $desde, $hasta]
+        );
 
-        $out = ['normal' => 0, 'tardanza' => 0, 'falta' => 0, 'falta_justificada' => 0, 'permiso' => 0, 'vacaciones' => 0];
+        $out = ['normal' => 0, 'tardanza' => 0, 'falta' => 0, 'falta_justificada' => 0, 'permiso' => 0, 'dia_libre' => 0, 'compensacion' => 0, 'vacaciones' => 0];
         $cur = new DateTime($desde);
         $fin = new DateTime($hasta);
         while ($cur <= $fin) {
@@ -137,6 +149,11 @@ class Asistencia
             if (!$tipo) {
                 foreach ($vac as $v) {
                     if ($f >= $v['fecha_inicio'] && $f <= $v['fecha_fin']) { $tipo = 'vacaciones'; break; }
+                }
+            }
+            if (!$tipo) {
+                foreach ($aus as $u) {
+                    if ($f >= $u['fecha_inicio'] && $f <= $u['fecha_fin']) { $tipo = $u['tipo']; break; }
                 }
             }
             if ($tipo && isset($out[$tipo])) $out[$tipo]++;
@@ -150,19 +167,93 @@ class Asistencia
         $h = date('Y-m-d');
         $filas = Database::get(
             "SELECT p.id,
-                    CASE WHEN r.tipo IS NOT NULL THEN r.tipo WHEN v.id IS NOT NULL THEN 'vacaciones' ELSE NULL END AS tipo
+                    CASE WHEN r.tipo IS NOT NULL THEN r.tipo WHEN v.id IS NOT NULL THEN 'vacaciones' WHEN u.id IS NOT NULL THEN u.tipo ELSE NULL END AS tipo
              FROM personal p
              LEFT JOIN rrhh_asistencia r ON r.personal_id = p.id AND r.fecha = ?
              LEFT JOIN rrhh_vacaciones v ON v.personal_id = p.id AND v.estado = 'aprobada' AND ? BETWEEN v.fecha_inicio AND v.fecha_fin
+             LEFT JOIN rrhh_ausencias u ON u.personal_id = p.id AND u.estado = 'aprobada' AND ? BETWEEN u.fecha_inicio AND u.fecha_fin
              WHERE p.estado = 'activo'",
-            [$h, $h]
+            [$h, $h, $h]
         );
-        $out = ['normal' => 0, 'tardanza' => 0, 'falta' => 0, 'falta_justificada' => 0, 'permiso' => 0, 'vacaciones' => 0];
+        $out = ['normal' => 0, 'tardanza' => 0, 'falta' => 0, 'falta_justificada' => 0, 'permiso' => 0, 'dia_libre' => 0, 'compensacion' => 0, 'vacaciones' => 0];
         $marcados = 0;
         foreach ($filas as $f) {
             if ($f['tipo']) { $out[$f['tipo']] = ($out[$f['tipo']] ?? 0) + 1; $marcados++; }
         }
         $out['sin_marcar'] = max(0, count($filas) - $marcados);
+        return $out;
+    }
+
+    /**
+     * Historial dia a dia (no solo conteos) para la pestaña "Historial" de Asistencia: una persona (opcional,
+     * si no se indica trae a todo el personal activo del area/filtro) a lo largo de un rango de fechas, con
+     * su marca de cada dia (manual o automatica por vacaciones/permiso/dia libre/compensacion aprobados).
+     * Solo devuelve los dias que tienen algo que mostrar (marca manual o automatica); los dias sin nada no
+     * salen en la lista (igual que "sin marcar" no aparece como fila en el marcado diario de hoy).
+     */
+    public static function historial(string $desde, string $hasta, ?int $personalId = null, ?int $areaId = null): array
+    {
+        $w = ''; $params = [];
+        if ($personalId) { $w .= ' AND p.id = ?'; $params[] = $personalId; }
+        if ($areaId) { $w .= ' AND p.area_id = ?'; $params[] = $areaId; }
+
+        $personas = Database::get("SELECT p.id, p.nombres, p.apellidos, p.dni, a.nombre AS area FROM personal p
+            LEFT JOIN areas a ON a.id = p.area_id WHERE p.estado = 'activo'$w ORDER BY p.apellidos, p.nombres", $params);
+        if (!$personas) return [];
+        $ids = array_column($personas, 'id');
+        $porId = [];
+        foreach ($personas as $p) $porId[$p['id']] = $p;
+        $in = implode(',', array_fill(0, count($ids), '?'));
+
+        $marcas = Database::get(
+            "SELECT * FROM rrhh_asistencia WHERE personal_id IN ($in) AND fecha BETWEEN ? AND ?",
+            array_merge($ids, [$desde, $hasta])
+        );
+        $mapaMarcas = [];
+        foreach ($marcas as $m) $mapaMarcas[$m['personal_id']][$m['fecha']] = $m;
+
+        $vac = Database::get(
+            "SELECT personal_id, fecha_inicio, fecha_fin FROM rrhh_vacaciones WHERE personal_id IN ($in) AND estado = 'aprobada' AND fecha_fin >= ? AND fecha_inicio <= ?",
+            array_merge($ids, [$desde, $hasta])
+        );
+        $aus = Database::get(
+            "SELECT personal_id, tipo, fecha_inicio, fecha_fin FROM rrhh_ausencias WHERE personal_id IN ($in) AND estado = 'aprobada' AND fecha_fin >= ? AND fecha_inicio <= ?",
+            array_merge($ids, [$desde, $hasta])
+        );
+
+        $out = [];
+        foreach ($personas as $p) {
+            $pid = $p['id'];
+            $cur = new DateTime($desde);
+            $fin = new DateTime($hasta);
+            while ($cur <= $fin) {
+                $f = $cur->format('Y-m-d');
+                $m = $mapaMarcas[$pid][$f] ?? null;
+                $tipo = $m['tipo'] ?? null;
+                $automatico = false;
+                if (!$tipo) {
+                    foreach ($vac as $v) {
+                        if ((int) $v['personal_id'] === $pid && $f >= $v['fecha_inicio'] && $f <= $v['fecha_fin']) { $tipo = 'vacaciones'; $automatico = true; break; }
+                    }
+                }
+                if (!$tipo) {
+                    foreach ($aus as $u) {
+                        if ((int) $u['personal_id'] === $pid && $f >= $u['fecha_inicio'] && $f <= $u['fecha_fin']) { $tipo = $u['tipo']; $automatico = true; break; }
+                    }
+                }
+                if ($tipo) {
+                    $out[] = [
+                        'personal_id' => $pid, 'nombres' => $p['nombres'], 'apellidos' => $p['apellidos'], 'dni' => $p['dni'], 'area' => $p['area'],
+                        'fecha' => $f, 'tipo' => $tipo, 'automatico' => $automatico,
+                        'hora_entrada' => $m['hora_entrada'] ?? null, 'hora_salida_almuerzo' => $m['hora_salida_almuerzo'] ?? null,
+                        'hora_entrada_almuerzo' => $m['hora_entrada_almuerzo'] ?? null, 'hora_salida' => $m['hora_salida'] ?? null,
+                        'observacion' => $m['observacion'] ?? null,
+                    ];
+                }
+                $cur->modify('+1 day');
+            }
+        }
+        usort($out, function ($a, $b) { return $b['fecha'] <=> $a['fecha'] ?: strcmp($a['apellidos'], $b['apellidos']); });
         return $out;
     }
 
@@ -224,6 +315,8 @@ class Asistencia
             'falta' => 'falta', 'ausente' => 'falta', 'ausencia' => 'falta',
             'falta_justificada' => 'falta_justificada', 'justificada' => 'falta_justificada',
             'permiso' => 'permiso', 'vacaciones' => 'vacaciones', 'vacacion' => 'vacaciones',
+            'dia_libre' => 'dia_libre', 'día_libre' => 'dia_libre',
+            'compensacion' => 'compensacion', 'compensación' => 'compensacion',
         ];
         return $map[$t] ?? (array_key_exists($t, self::TIPOS) ? $t : 'normal');
     }

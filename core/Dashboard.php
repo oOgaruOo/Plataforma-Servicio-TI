@@ -176,16 +176,19 @@ class Dashboard
                 if (Auth::can('rrhh', 'ver')) {
                     Contratos::asegurar();
                     Vacaciones::asegurar();
+                    Ausencias::asegurar();
                     $rrhh = [
                         'contratos_por_vencer' => count(Contratos::porVencer(30)),
                         'contratos_vencidos'   => self::n("SELECT COUNT(*) FROM personal_contratos WHERE vigente = 1 AND fecha_fin IS NOT NULL AND fecha_fin < ?", [$hoy]),
                         'vacaciones_pendientes'=> self::n("SELECT COUNT(*) FROM rrhh_vacaciones WHERE estado = 'pendiente'"),
+                        'ausencias_pendientes' => self::n("SELECT COUNT(*) FROM rrhh_ausencias WHERE estado = 'pendiente'"),
                     ];
                     $out['rrhh'] = $rrhh;
                     if (Auth::can('rrhh', 'gestionar')) {
                         if ($rrhh['contratos_vencidos'] > 0) $al[] = ['nivel' => 'rojo', 'n' => $rrhh['contratos_vencidos'], 'texto' => $rrhh['contratos_vencidos'] . ' contrato(s) vencido(s) sin renovar ni finalizar', 'ruta' => 'rrhh/contratos', 'icono' => 'bi-file-earmark-x'];
                         if ($rrhh['contratos_por_vencer'] > 0) $al[] = ['nivel' => 'ambar', 'n' => $rrhh['contratos_por_vencer'], 'texto' => $rrhh['contratos_por_vencer'] . ' contrato(s) por vencer en 30 días', 'ruta' => 'rrhh/contratos', 'icono' => 'bi-file-earmark-person'];
                         if ($rrhh['vacaciones_pendientes'] > 0) $al[] = ['nivel' => 'ambar', 'n' => $rrhh['vacaciones_pendientes'], 'texto' => $rrhh['vacaciones_pendientes'] . ' solicitud(es) de vacaciones por revisar', 'ruta' => 'rrhh/vacaciones', 'icono' => 'bi-airplane'];
+                        if ($rrhh['ausencias_pendientes'] > 0) $al[] = ['nivel' => 'ambar', 'n' => $rrhh['ausencias_pendientes'], 'texto' => $rrhh['ausencias_pendientes'] . ' solicitud(es) de permiso/día libre/compensación por revisar', 'ruta' => 'rrhh/ausencias', 'icono' => 'bi-calendar-minus'];
                     }
                 }
 

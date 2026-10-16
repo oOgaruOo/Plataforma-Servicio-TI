@@ -26,15 +26,17 @@ class Roles
         'software'      => 'Software instalado',
         'capacitaciones' => 'Capacitaciones',
         'rrhh'          => 'RR.HH. ampliado',
+        'chat'          => 'Chat',
     ];
 
     /** Permisos que dan control amplio o borran datos: se resaltan al asignarlos. */
     public const SENSIBLES = [
-        'usuarios.gestionar', 'configuracion.gestionar', 'auditoria.ver',
+        'usuarios.gestionar', 'configuracion.gestionar', 'auditoria.ver', 'auditoria.ver_area',
         'personal.eliminar', 'personal.cese', 'equipos.baja',
         'tickets.eliminar', 'mantenimiento.eliminar', 'mantenimiento.aprobar_costo',
         'software.gestionar',
         'rrhh.gestionar', 'rrhh.eliminar',
+        'chat.auditoria',
     ];
 
     /** Permisos que el codigo usa. Si falta alguno en la BD se crea. [modulo, accion, descripcion] */
@@ -58,6 +60,10 @@ class Roles
         ['rrhh', 'ver_area', 'Ver los requerimientos de personal de su área', 'tickets.ver_area'],
         // Separado de "gestionar": borrar (no solo desactivar) del catálogo de Puestos, Equipos de TI y Requisitos
         ['rrhh', 'eliminar', 'Eliminar puestos, equipos de TI y requisitos del catálogo, y requerimientos de personal ya cerrados (cubiertos o cancelados)', 'rrhh.gestionar'],
+        // Chat: antes solo se controlaba revisando usuarios.gestionar; ahora es un permiso propio y asignable por rol
+        ['chat', 'auditoria', 'Ver el historial de cualquier sala de chat (auditoría de chat)', 'usuarios.gestionar'],
+        // Auditoria por area: ve solo lo que hizo el personal de su propia area (sin heredar de nada: se asigna a mano)
+        ['auditoria', 'ver_area', 'Ver la auditoría de las acciones hechas por el personal de su área', null],
     ];
 
     /** Catalogo base del sistema: el codigo los usa (menus, endpoints, avisos). No se pueden eliminar desde la pantalla Permisos. */
@@ -70,10 +76,11 @@ class Roles
         'mantenimiento.cambiar_estado','mantenimiento.eliminar',
         'asignaciones.ver','asignaciones.crear','asignaciones.devolver','asignaciones.aprobar','asignaciones.solicitar',
         'actas.generar','reportes.ver','reportes.ver_area',
-        'configuracion.gestionar','usuarios.gestionar','auditoria.ver',
+        'configuracion.gestionar','usuarios.gestionar','auditoria.ver','auditoria.ver_area',
         'software.ver','software.registrar','software.gestionar',
         'capacitaciones.solicitar','capacitaciones.ver_area','capacitaciones.ver','capacitaciones.gestionar',
         'rrhh.ver','rrhh.gestionar','rrhh.solicitar','rrhh.ver_area','rrhh.eliminar',
+        'chat.auditoria',
     ];
 
     public static function esBase(string $modulo, string $accion): bool

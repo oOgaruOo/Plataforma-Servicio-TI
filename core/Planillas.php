@@ -80,7 +80,6 @@ class Planillas
     public static function generar(string $periodo, int $uid): array
     {
         $personas = Database::get("SELECT id FROM personal WHERE estado = 'activo'");
-        $conceptos = self::conceptos(true);
         $n = 0; $omitidos = 0;
         foreach ($personas as $pe) {
             $pid = (int) $pe['id'];
@@ -88,27 +87,57 @@ class Planillas
             if (!$c) { $omitidos++; continue; }
             $estActual = Database::getValue('SELECT estado FROM rrhh_planillas WHERE periodo = ? AND personal_id = ?', [$periodo, $pid]);
             if ($estActual === 'cerrada') continue;
-            $base = (float) ($c['salario'] ?? 0);
-            $ing = 0.0; $des = 0.0; $det = [];
-            foreach ($conceptos as $cp) {
-                $m = $cp['modo'] === 'porcentaje' ? round($base * (float) $cp['valor'] / 100, 2) : (float) $cp['valor'];
-                if ($m == 0) continue;
-                $det[] = ['nombre' => $cp['nombre'], 'tipo' => $cp['tipo'], 'monto' => $m];
-                if ($cp['tipo'] === 'ingreso') $ing += $m; else $des += $m;
-            }
-            $neto = $base + $ing - $des;
-            $existe = Database::getValue('SELECT id FROM rrhh_planillas WHERE periodo = ? AND personal_id = ?', [$periodo, $pid]);
-            if ($existe) {
-                Database::update('rrhh_planillas', ['sueldo_base' => $base, 'total_ingresos' => $ing, 'total_descuentos' => $des, 'neto' => $neto, 'generado_en' => date('Y-m-d H:i:s'), 'generado_por' => $uid], 'id = ?', [$existe]);
-                Database::run('DELETE FROM rrhh_planilla_detalle WHERE planilla_id = ?', [$existe]);
-                $planillaId = (int) $existe;
-            } else {
-                $planillaId = Database::insert('rrhh_planillas', ['periodo' => $periodo, 'personal_id' => $pid, 'sueldo_base' => $base, 'total_ingresos' => $ing, 'total_descuentos' => $des, 'neto' => $neto, 'estado' => 'borrador', 'generado_en' => date('Y-m-d H:i:s'), 'generado_por' => $uid]);
-            }
-            foreach ($det as $d) Database::insert('rrhh_planilla_detalle', ['planilla_id' => $planillaId, 'nombre' => $d['nombre'], 'tipo' => $d['tipo'], 'monto' => $d['monto']]);
+            self::calcularUna($periodo, $pid, (float) ($c['salario'] ?? 0), $uid);
             $n++;
         }
         return ['generadas' => $n, 'omitidas_sin_contrato' => $omitidos];
+    }
+
+    /**
+     * Agrega (o recalcula) la planilla de UNA sola persona en un periodo, a partir de su contrato
+     * vigente. Util cuando "Generar / recalcular" (todo el personal activo con contrato vigente) dejo
+     * afuera a alguien, o cuando se necesita agregar a una persona que recien se incorporo en el periodo.
+     * No toca una planilla ya CERRADA de esa persona en ese periodo (hay que reabrirla primero).
+     */
+    public static function agregarPersona(string $periodo, int $personalId, int $uid): array
+    {
+        if (!Database::getValue("SELECT id FROM personal WHERE id = ? AND estado = 'activo'", [$personalId])) {
+            return ['ok' => false, 'error' => 'La persona no existe o no está activa.'];
+        }
+        $c = Contratos::vigenteDe($personalId);
+        if (!$c) {
+            return ['ok' => false, 'error' => 'Esta persona no tiene un contrato vigente; regístrelo primero en RR.HH. > Contratos.'];
+        }
+        $estActual = Database::getValue('SELECT estado FROM rrhh_planillas WHERE periodo = ? AND personal_id = ?', [$periodo, $personalId]);
+        if ($estActual === 'cerrada') {
+            return ['ok' => false, 'error' => 'Esta persona ya tiene una planilla CERRADA en ese periodo; reábrala primero si necesita recalcularla.'];
+        }
+        $id = self::calcularUna($periodo, $personalId, (float) ($c['salario'] ?? 0), $uid);
+        return ['ok' => true, 'id' => $id, 'ya_existia' => $estActual !== null];
+    }
+
+    /** Calcula (segun el catalogo de conceptos vigente) y guarda/actualiza en borrador la planilla de una persona. */
+    private static function calcularUna(string $periodo, int $personalId, float $base, int $uid): int
+    {
+        $conceptos = self::conceptos(true);
+        $ing = 0.0; $des = 0.0; $det = [];
+        foreach ($conceptos as $cp) {
+            $m = $cp['modo'] === 'porcentaje' ? round($base * (float) $cp['valor'] / 100, 2) : (float) $cp['valor'];
+            if ($m == 0) continue;
+            $det[] = ['nombre' => $cp['nombre'], 'tipo' => $cp['tipo'], 'monto' => $m];
+            if ($cp['tipo'] === 'ingreso') $ing += $m; else $des += $m;
+        }
+        $neto = $base + $ing - $des;
+        $existe = Database::getValue('SELECT id FROM rrhh_planillas WHERE periodo = ? AND personal_id = ?', [$periodo, $personalId]);
+        if ($existe) {
+            Database::update('rrhh_planillas', ['sueldo_base' => $base, 'total_ingresos' => $ing, 'total_descuentos' => $des, 'neto' => $neto, 'generado_en' => date('Y-m-d H:i:s'), 'generado_por' => $uid], 'id = ?', [$existe]);
+            Database::run('DELETE FROM rrhh_planilla_detalle WHERE planilla_id = ?', [$existe]);
+            $planillaId = (int) $existe;
+        } else {
+            $planillaId = Database::insert('rrhh_planillas', ['periodo' => $periodo, 'personal_id' => $personalId, 'sueldo_base' => $base, 'total_ingresos' => $ing, 'total_descuentos' => $des, 'neto' => $neto, 'estado' => 'borrador', 'generado_en' => date('Y-m-d H:i:s'), 'generado_por' => $uid]);
+        }
+        foreach ($det as $d) Database::insert('rrhh_planilla_detalle', ['planilla_id' => $planillaId, 'nombre' => $d['nombre'], 'tipo' => $d['tipo'], 'monto' => $d['monto']]);
+        return $planillaId;
     }
 
     public static function cerrar(string $periodo, int $uid): int

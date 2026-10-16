@@ -59,7 +59,50 @@ class AuditoriaConsulta
                        a.fuente_geolocalizacion, a.created_at,
                        COALESCE(a.usuario_nombre, u.nombre_completo) AS usuario_mostrar
                 FROM auditoria_logs a
-                LEFT JOIN usuarios u ON u.id = a.usuario_id" . $cond;
+                LEFT JOIN usuarios u ON u.id = a.usuario_id
+                LEFT JOIN personal p ON p.id = u.personal_id" . $cond;
+    }
+
+    /**
+     * Alcance: que puede ver esta persona.
+     * - auditoria.ver       -> todo
+     * - auditoria.ver_area  -> solo lo que hizo el personal de su propia area (no lo que afecta a su area:
+     *                          el log abarca TODOS los modulos y no todos guardan un area afectada)
+     * - ninguno de los dos  -> nada (el llamador debe rechazar antes de consultar)
+     * @return array{modo:string,area_id:?int}
+     */
+    public static function alcance(): array
+    {
+        if (Auth::can('auditoria', 'ver')) return ['modo' => 'todos', 'area_id' => null];
+        if (Auth::can('auditoria', 'ver_area')) {
+            $pid = Database::getValue('SELECT personal_id FROM usuarios WHERE id = ?', [Auth::userId()]);
+            $area = $pid ? Database::getValue('SELECT area_id FROM personal WHERE id = ?', [(int)$pid]) : null;
+            return ['modo' => 'area', 'area_id' => $area ? (int)$area : null];
+        }
+        return ['modo' => 'ninguno', 'area_id' => null];
+    }
+
+    /**
+     * Condicion SQL (fragmento booleano, sin WHERE/AND) para limitar por el alcance, usando el
+     * alias de la columna usuario_id indicado ('a.usuario_id' en listar/exportar, 'usuario_id' en resumen).
+     * @return array{0:string,1:array}
+     */
+    public static function condicionAlcance(array $alc, string $colUsuario = 'a.usuario_id'): array
+    {
+        if ($alc['modo'] === 'todos') return ['', []];
+        if ($alc['modo'] === 'area' && $alc['area_id']) {
+            return ["$colUsuario IN (SELECT u.id FROM usuarios u INNER JOIN personal p ON p.id = u.personal_id WHERE p.area_id = ?)",
+                    [$alc['area_id']]];
+        }
+        return ['1 = 0', []];   // ver_area sin area asignada (o sin ningun permiso): no ve nada
+    }
+
+    /** Suma la condicion de alcance a un WHERE ya armado (cond empieza con ' WHERE' o esta vacio). @return array{0:string,1:array} */
+    public static function conAlcance(string $cond, array $params, array $alc, string $colUsuario = 'a.usuario_id'): array
+    {
+        [$condA, $pA] = self::condicionAlcance($alc, $colUsuario);
+        if ($condA === '') return [$cond, $params];
+        return [$cond . ($cond !== '' ? ' AND ' : ' WHERE ') . $condA, array_merge($params, $pA)];
     }
 
     /** Agrega el texto del cuadro de busqueda al WHERE. @return array{0:string,1:array} */

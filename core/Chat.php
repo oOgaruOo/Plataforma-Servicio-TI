@@ -20,7 +20,7 @@ class Chat
     public const TIPOS = ['general', 'directo', 'grupo', 'area', 'entre_areas', 'reunion'];
 
     private static bool $ok = false;
-    private const ESQ = 3;                 // sube cuando cambia la estructura (se revisa 1 vez por sesion)
+    private const ESQ = 4;                 // sube cuando cambia la estructura (se revisa 1 vez por sesion)
 
     public const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
     public const EXT_ARCHIVO = [
@@ -123,6 +123,7 @@ class Chat
             Esquema::columna('chat_salas', 'area2_id', 'SMALLINT UNSIGNED NULL');
             Esquema::columna('chat_salas', 'creada_por', 'INT UNSIGNED NULL');
             Esquema::columna('chat_salas', 'activa', 'TINYINT NOT NULL DEFAULT 1');
+            Esquema::columna('chat_salas', 'created_at', 'TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP');
             self::tipoLibre();
         }
         foreach ([
@@ -234,6 +235,13 @@ class Chat
     public static function esSistemas(): bool
     {
         return Auth::can('usuarios', 'gestionar') || Auth::rol() === 'super_admin';
+    }
+
+    /** Solo para ver (auditoria): ademas de Sistemas, cualquier rol con el permiso propio chat.auditoria.
+     *  No da moderacion, stickers ni acceso de escritura; esSistemas() sigue siendo lo unico que da eso. */
+    public static function puedeAuditar(): bool
+    {
+        return self::esSistemas() || Auth::can('chat', 'auditoria');
     }
 
     // ---------------------------------------------------------
@@ -376,6 +384,76 @@ class Chat
                         WHERE m.sala_id = csu.sala_id AND m.id > csu.ultimo_leido_id AND m.usuario_id <> ?) AS c
                 FROM chat_sala_usuarios csu INNER JOIN chat_salas s ON s.id = csu.sala_id
                 WHERE csu.usuario_id = ? AND s.activa = 1) t", [$usuarioId, $usuarioId]) ?? 0);
+    }
+
+    // ---------------------------------------------------------
+    // Mensajes: lectura y formato para pantalla (lo usan api/chat/mensajes.php y api/chat/auditoria.php)
+    // ---------------------------------------------------------
+
+    /** Selecciona mensajes con autor y datos del mensaje al que responden. */
+    public const SEL_MENSAJES = "SELECT m.id, m.sala_id, m.usuario_id, m.mensaje, m.sistema, m.created_at, m.responde_a, m.editado, m.eliminado,
+            m.archivo_nombre, m.archivo_tipo, m.archivo_size, m.menciones, m.act, m.sticker_id, u.nombre_completo AS autor,
+            p.mensaje AS r_texto, p.eliminado AS r_elim, p.archivo_nombre AS r_archivo, p.archivo_tipo AS r_archivo_tipo,
+            p.sticker_id AS r_sticker_id, pu.nombre_completo AS r_autor
+         FROM chat_mensajes m
+         LEFT JOIN usuarios u ON u.id = m.usuario_id
+         LEFT JOIN chat_mensajes p ON p.id = m.responde_a
+         LEFT JOIN usuarios pu ON pu.id = p.usuario_id";
+
+    /** Texto corto para mostrar cuando el mensaje no tiene texto propio (vista previa / cita de respuesta). */
+    public static function previaSinTexto(?string $archivoNombre, ?string $archivoTipo, ?int $stickerId): string
+    {
+        if ($stickerId) return '🧩 Sticker';
+        if ($archivoTipo && strpos($archivoTipo, 'audio/') === 0) return '🎤 Nota de voz';
+        return $archivoNombre ? '📎 ' . $archivoNombre : '';
+    }
+
+    /** Deja cada mensaje listo para la pantalla (reacciones, respuesta, adjunto, sticker). */
+    public static function formatoMensajes(array $rows, int $yo): array
+    {
+        if (!$rows) return [];
+        $ids = array_map(fn($r) => (int) $r['id'], $rows);
+        $in = implode(',', array_fill(0, count($ids), '?'));
+        $rea = [];
+        foreach (Database::get(
+            "SELECT mensaje_id, emoji, COUNT(*) AS n, SUM(CASE WHEN usuario_id = ? THEN 1 ELSE 0 END) AS yo
+             FROM chat_reacciones WHERE mensaje_id IN ($in) GROUP BY mensaje_id, emoji ORDER BY MIN(id)",
+            array_merge([$yo], $ids)) as $r) {
+            $rea[(int) $r['mensaje_id']][] = ['e' => $r['emoji'], 'n' => (int) $r['n'], 'yo' => (int) $r['yo'] > 0];
+        }
+        $out = [];
+        foreach ($rows as $r) {
+            $elim = (int) $r['eliminado'] === 1;
+            $m = [
+                'id' => (int) $r['id'], 'usuario_id' => (int) $r['usuario_id'], 'autor' => $r['autor'],
+                'mensaje' => $elim ? '' : (string) $r['mensaje'], 'sistema' => (int) $r['sistema'],
+                'created_at' => $r['created_at'], 'editado' => (int) $r['editado'] === 1, 'eliminado' => $elim,
+                'act' => (int) $r['act'], 'reacciones' => $elim ? [] : ($rea[(int) $r['id']] ?? []),
+                'menciones' => $r['menciones'] ? array_map('intval', explode(',', $r['menciones'])) : [],
+                'archivo' => null, 'resp' => null, 'sticker' => null,
+            ];
+            if (!$elim && $r['archivo_nombre']) {
+                $m['archivo'] = [
+                    'nombre' => $r['archivo_nombre'], 'size' => (int) $r['archivo_size'],
+                    'imagen' => strpos((string) $r['archivo_tipo'], 'image/') === 0,
+                    'audio' => strpos((string) $r['archivo_tipo'], 'audio/') === 0,
+                ];
+            }
+            if (!$elim && $r['sticker_id']) {
+                $m['sticker'] = ['id' => (int) $r['sticker_id']];
+            }
+            if ($r['responde_a']) {
+                $m['resp'] = [
+                    'id' => (int) $r['responde_a'], 'autor' => $r['r_autor'],
+                    'texto' => (int) $r['r_elim'] === 1 ? 'Mensaje eliminado' : mb_substr(
+                        (string) ($r['r_texto'] !== '' ? $r['r_texto'] : self::previaSinTexto($r['r_archivo'], $r['r_archivo_tipo'], $r['r_sticker_id'] ? (int) $r['r_sticker_id'] : null)),
+                        0, 90
+                    ),
+                ];
+            }
+            $out[] = $m;
+        }
+        return $out;
     }
 
     // ---------------------------------------------------------

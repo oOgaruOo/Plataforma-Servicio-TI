@@ -353,7 +353,7 @@ class Guias
                 'id' => 'chat', 'titulo' => 'Chat interno', 'icono' => 'chat-dots', 'color' => '#2563eb',
                 'categoria' => 'Para empezar', 'permiso' => null, 'ruta' => 'chat/principal', 'para' => 'Todas las personas',
                 'resumen' => 'Conversar con una persona, con un área, en grupos o en reuniones, con archivos, stickers, notas de voz, menciones y reacciones.',
-                'tags' => ['chat', 'mensajes', 'grupos', 'reuniones', 'archivos', 'emojis', 'menciones', 'stickers', 'audio', 'nota de voz'],
+                'tags' => ['chat', 'mensajes', 'grupos', 'reuniones', 'archivos', 'emojis', 'menciones', 'stickers', 'audio', 'nota de voz', 'auditoria', 'supervision', 'historial'],
                 'secciones' => [
                     ['titulo' => 'Empezar una conversación', 'pasos' => [
                         'Desde cualquier pantalla, pulsa el globo azul: se abre un chat emergente para ver tus conversaciones, escribir, adjuntar un archivo o empezar un chat nuevo (persona o área) sin salir de lo que estás haciendo. «Abrir el chat completo» te lleva a este módulo.',
@@ -371,6 +371,11 @@ class Guias
                         'El botón del micrófono graba una nota de voz desde el navegador (hasta 2 minutos): se puede cancelar antes de enviarla. Se reproduce con un reproductor de audio dentro del mensaje.',
                         'El área de Sistemas puede agregar (subir una imagen) o quitar stickers del catálogo desde el mismo selector; un sticker quitado ya no se puede volver a enviar, pero los mensajes que ya lo usaron lo siguen mostrando.',
                     ], 'nota' => 'Grabar audio necesita permiso del navegador para el micrófono, y el navegador solo lo permite si el sitio usa una conexión segura (HTTPS) o se abre como localhost.'],
+                    ['titulo' => 'Auditoría de chat (solo Sistemas)', 'pasos' => [
+                        'En Administración > «Auditoría de chat» (visible solo para el área de Sistemas), se puede revisar en modo lectura CUALQUIER conversación: la sala General, chats entre dos personas, grupos, canales de área y reuniones — no solo los chats 1 a 1 que ya se podían supervisar desde el chat normal.',
+                        'A la izquierda está el listado de todas las conversaciones activas (buscar por nombre, filtrar por tipo); al elegir una se abre su historial a la derecha, con los mismos adjuntos, stickers y notas de voz que se ven en el chat normal.',
+                        'Se puede acotar el historial a un rango de fechas, o seguir cargando mensajes más antiguos con el botón de abajo. Queda registrado en Auditoría quién abrió cada conversación a revisar.',
+                    ], 'nota' => 'No se recupera el texto de mensajes ya borrados: siguen mostrándose como «Mensaje eliminado», igual que en el chat normal.'],
                 ],
             ],
             [
@@ -404,7 +409,7 @@ class Guias
                 'id' => 'usuarios', 'titulo' => 'Usuarios, roles y permisos', 'icono' => 'person-gear', 'color' => '#475569',
                 'categoria' => 'Administración', 'permiso' => [['usuarios', 'gestionar'], ['configuracion', 'gestionar']], 'ruta' => 'usuarios/lista', 'para' => 'Administradores',
                 'resumen' => 'Crear usuarios, asignar roles, ajustar permisos puntuales y entender qué puede hacer cada rol.',
-                'tags' => ['usuarios', 'roles', 'permisos', 'contraseña', 'bloqueo', 'matriz', 'administrador'],
+                'tags' => ['usuarios', 'roles', 'permisos', 'contraseña', 'bloqueo', 'matriz', 'administrador', 'plantilla por área', 'rol maestro', 'jefe de área'],
                 'secciones' => [
                     ['titulo' => 'Crear y administrar usuarios', 'pasos' => [
                         'En Administración › Usuarios pulsa «Nuevo usuario», vincúlalo a una persona del personal y elige su rol.',
@@ -412,15 +417,20 @@ class Guias
                         'Un usuario desactivado ya no puede entrar, pero su historial se conserva.',
                     ]],
                     ['titulo' => 'Roles y permisos', 'pasos' => [
-                        'Cada rol agrupa permisos del tipo módulo.acción (por ejemplo tickets.crear). En Administración › Permisos hay tres pestañas:',
+                        'Cada rol agrupa permisos del tipo módulo.acción (por ejemplo tickets.crear). En Administración › Permisos hay cuatro pestañas:',
                         'Catálogo: todos los permisos del sistema, con búsqueda, filtros y los marcados como sensibles.',
                         'Matriz por rol: casillas rol × permiso. Marca o desmarca y se guarda al instante.',
                         'Ajustes por usuario: concede o quita un permiso a una persona sin cambiar su rol.',
+                        'Plantilla por área: copia de un clic los permisos de «Jefe de área» y/o «Personal» de un área que ya está bien configurada hacia una área nueva, en vez de marcarlos uno por uno (reemplaza lo que tuviera el área de destino). Requiere el permiso de Roles («usuarios.gestionar»).',
                         'El rol super_admin tiene todo y no se puede editar.',
                     ], 'alerta' => 'El sistema no te deja quitarte a ti mismo el acceso a Permisos o Usuarios. Todos los cambios quedan en Auditoría.'],
                     ['titulo' => 'Dar acceso a un módulo nuevo', 'pasos' => [
                         'Cuando se agrega un módulo (por ejemplo Software), sus permisos aparecen en el catálogo. Entra a la Matriz y márcalos para los roles que lo necesiten.',
                         'Las personas con la sesión ya abierta deben volver a iniciar sesión para ver el menú nuevo.',
+                    ]],
+                    ['titulo' => 'Ver la Auditoría o el Chat solo de la propia área', 'pasos' => [
+                        'El permiso «auditoria.ver» ve toda la Auditoría; el permiso «auditoria.ver_area» (sin el anterior) ve solo las acciones hechas por el personal de la propia área de quien inició sesión —útil para dar a cada jefe de área su propia Auditoría sin mezclar las demás.',
+                        'El permiso «chat.auditoria» da acceso solo a la pantalla «Auditoría de chat», sin necesitar el permiso completo de Roles ni los demás accesos de Sistemas.',
                     ]],
                 ],
             ],
@@ -449,10 +459,10 @@ class Guias
                 ],
             ],
             [
-                'id' => 'rrhh', 'titulo' => 'RR.HH. ampliado (Contratos, Vacaciones, Asistencia, Planillas y Requerimiento de personal)', 'icono' => 'person-badge', 'color' => '#7c3aed',
+                'id' => 'rrhh', 'titulo' => 'RR.HH. ampliado (Contratos, Vacaciones, Permisos, Asistencia, Planillas y Requerimiento de personal)', 'icono' => 'person-badge', 'color' => '#7c3aed',
                 'categoria' => 'Personas', 'permiso' => [['rrhh', 'ver'], ['rrhh', 'gestionar'], ['rrhh', 'solicitar'], ['rrhh', 'ver_area'], ['rrhh', 'eliminar']], 'ruta' => 'rrhh/contratos', 'para' => 'Cualquier área (Requerimiento de personal) y RR. HH. / Administradores (el resto)',
-                'resumen' => 'Gestión interna del personal: contratos, vacaciones, asistencia, una planilla referencial y el requerimiento de personal de cada área (con catálogo de puestos, biblioteca de requisitos, equipos de TI, EPP y salario referencial). No reemplaza PLAME ni tiene validez tributaria/legal.',
-                'tags' => ['rrhh', 'contratos', 'vacaciones', 'asistencia', 'planilla', 'boleta', 'personal', 'sueldo', 'requerimiento', 'epp', 'equipos', 'puestos', 'requisitos', 'biblioteca', 'salario', 'antiguedad', 'excel', 'csv', 'importar', 'marcador', 'huella', 'biometrico', 'horario', 'tolerancia', 'tardanza', 'sugerido', 'almuerzo'],
+                'resumen' => 'Gestión interna del personal: contratos, vacaciones, permisos/días libres/compensaciones, asistencia (con historial), una planilla referencial y el requerimiento de personal de cada área (con catálogo de puestos, biblioteca de requisitos, equipos de TI, EPP y salario referencial). No reemplaza PLAME ni tiene validez tributaria/legal.',
+                'tags' => ['rrhh', 'contratos', 'vacaciones', 'permisos', 'licencias', 'dia libre', 'compensacion', 'asistencia', 'historial', 'planilla', 'boleta', 'personal', 'sueldo', 'requerimiento', 'epp', 'equipos', 'puestos', 'requisitos', 'biblioteca', 'salario', 'antiguedad', 'excel', 'csv', 'importar', 'marcador', 'huella', 'biometrico', 'horario', 'tolerancia', 'tardanza', 'sugerido', 'almuerzo'],
                 'secciones' => [
                     ['titulo' => 'Contratos', 'pasos' => [
                         'En RR.HH. › Contratos hay dos pestañas: «Personal contratado» (un renglón por persona, solo las que tienen contrato vigente ahora) e «Historial completo» (todos los contratos de siempre, incluidos los ya renovados o finalizados).',
@@ -469,19 +479,27 @@ class Guias
                         'RR.HH. aprueba, rechaza (con motivo) o cancela cada solicitud pendiente desde la lista.',
                         'Una vez aprobada, esos días aparecen solos en Asistencia (ver abajo): no hay que marcarlos a mano ahí también.',
                     ]],
+                    ['titulo' => 'Permisos y licencias', 'pasos' => [
+                        'En RR.HH. › Permisos y licencias se registran 3 tipos de ausencia autorizada: Permiso, Día libre y Compensación (por ejemplo, un día libre a cambio de haber trabajado un feriado o fin de semana).',
+                        'Pulsa «Nueva solicitud», elige la persona, el tipo, las fechas (puede ser un solo día o varios) y, si hace falta, el motivo. Queda «Pendiente» hasta que RR.HH. la apruebe, rechace (con motivo) o cancele — igual que Vacaciones.',
+                        'Una vez APROBADA, esos días aparecen solos en Asistencia con el tipo correspondiente (Permiso, Día libre o Compensación) y el aviso «(automático)»: no hay que marcarlos a mano ahí también.',
+                        'No se puede registrar una solicitud que se cruce en fechas con otra Pendiente o Aprobada de la misma persona (de cualquiera de los 3 tipos); si además se cruza con una solicitud de vacaciones, el sistema avisa pero no bloquea (puede haber razones válidas para registrarlo igual).',
+                    ]],
                     ['titulo' => 'Asistencia', 'pasos' => [
-                        'En RR.HH. › Asistencia elige la fecha (y opcionalmente el área) y marca a cada persona: Normal, Tardanza, Falta, Falta justificada, Permiso o Vacaciones. Ahora se registran 4 horas por persona: entrada, salida a almorzar, regreso de almuerzo y salida.',
+                        'En RR.HH. › Asistencia, la pestaña «Marcado diario» elige la fecha (y opcionalmente el área) y marca a cada persona: Normal, Tardanza, Falta, Falta justificada, Permiso, Día libre, Compensación o Vacaciones. Se registran 4 horas por persona: entrada, salida a almorzar, regreso de almuerzo y salida.',
                         'Horario de referencia: lunes a viernes de 8:00 a.m. a 5:00 p.m. (almuerzo de 1:00 a 2:00 p.m.); sábados de 8:00 a.m. a 1:00 p.m. (jornada corrida, sin almuerzo). Hay una tolerancia de ingreso de 15 minutos: entrar a las 8:00 o hasta las 8:15 cuenta como Normal.',
                         'El sistema calcula solo si es Normal o Tardanza apenas se escribe (o se importa) la hora de entrada, usando esa tolerancia; no hay que elegirlo a mano salvo que se quiera marcar otra cosa (Falta, Permiso, etc.), que siempre se puede forzar manualmente.',
-                        'Si la persona tiene una solicitud de vacaciones APROBADA que cubre ese día, el sistema ya la muestra marcada como «Vacaciones» con el aviso «(automático)»: nadie tiene que escribirla a mano, y así se cuenta igual en los resúmenes aunque no se pulse «Guardar» ese día.',
+                        'Si la persona tiene una solicitud de vacaciones (o un permiso/día libre/compensación) APROBADA que cubre ese día, el sistema ya la muestra marcada con el tipo que corresponda y el aviso «(automático)»: nadie tiene que escribirla a mano, y así se cuenta igual en los resúmenes aunque no se pulse «Guardar» ese día.',
                         'Se guarda una marca por persona y por día; volver a guardar ese día la actualiza (sea que se escribió a mano o se importó).',
+                        'Pestaña «Historial»: elige una persona (o «Todas»), opcionalmente un área, y un rango de fechas, y pulsa «Buscar» para ver día por día la hora de entrada, salida a almorzar, regreso y salida de cada quien, con el tipo de marca (incluidas las automáticas por vacaciones o permisos aprobados). Solo salen los días que tienen algo marcado; el rango máximo es de 2 años.',
                         'Botón «Importar Excel/CSV»: sirve para subir las marcaciones de un marcador de huella (o cualquier otro equipo) exportadas a un archivo. El archivo debe tener en la primera fila los encabezados DNI, Fecha, y opcionalmente Hora Entrada, Hora Salida Almuerzo, Hora Entrada Almuerzo, Hora Salida, Tipo y Observación (hay un botón para descargar una plantilla de ejemplo); el DNI debe coincidir con el de la ficha de Personal. Si el archivo no trae el Tipo, el sistema lo calcula solo con la hora de entrada y la tolerancia. Al terminar, avisa cuántas filas se guardaron y cuáles tuvieron problemas (por ejemplo, un DNI que no existe).',
                         'El sistema todavía no se conecta directo al equipo marcador de huella (no hay forma de saber la marca ni el protocolo de cada fabricante): por ahora se trabaja exportando desde el equipo e importando ese archivo aquí. Tampoco valida todavía si la salida, el almuerzo o el regreso se hicieron a la hora que correspondía (solo se guardan); eso puede agregarse después si hace falta.',
                     ]],
                     ['titulo' => 'Planillas', 'pasos' => [
                         'En la pestaña «Conceptos» se definen los ingresos y descuentos (monto fijo en soles o porcentaje del sueldo base) que se aplican al generar.',
                         'Elige el periodo (mes) y pulsa «Generar / recalcular»: toma el sueldo del contrato vigente de cada persona activa y aplica los conceptos activos. Se puede recalcular mientras esté en borrador.',
-                        'Cada fila tiene una boleta imprimible (referencial). «Cerrar periodo» deja todas sus planillas en borrador como cerradas; una planilla cerrada se puede «Reabrir» si hay que corregir algo.',
+                        'El botón con el icono de persona (junto a «Generar / recalcular») agrega a UNA sola persona al periodo: útil cuando alguien se incorporó después de generar, o cuando «Generar / recalcular» la dejó afuera por no tener todavía un contrato vigente. Elige a la persona en la lista (muestra su contrato vigente como vista previa) y confirma; si ya tenía una planilla abierta en ese periodo, la recalcula en vez de duplicarla.',
+                        'Cada fila tiene una boleta imprimible (referencial). «Cerrar periodo» deja todas sus planillas en borrador como cerradas; una planilla cerrada se puede «Reabrir» si hay que corregir algo (incluyendo para agregar o recalcular a una persona puntual con el botón de arriba).',
                     ], 'nota' => 'La planilla de SIGTI es referencial y de uso interno: no reemplaza PLAME, boletas electrónicas ni un sistema contable oficial.'],
                     ['titulo' => 'Requerimiento de personal', 'pasos' => [
                         'Cualquier área, desde «Mis requerimientos», pulsa «Solicitar personal»: escribe el puesto (residente, analista, practicante…), la cantidad, un tipo de contrato sugerido (opcional), un salario referencial (mínimo y máximo, opcional), la justificación y el plazo para tener a la persona contratada y firmando sus documentos.',
@@ -503,12 +521,13 @@ class Guias
                 'id' => 'auditoria', 'titulo' => 'Auditoría del sistema', 'icono' => 'journal-check', 'color' => '#b45309',
                 'categoria' => 'Administración', 'permiso' => [['auditoria', 'ver']], 'ruta' => 'auditoria/lista', 'para' => 'Administradores y control interno',
                 'resumen' => 'Revisar quién hizo qué y cuándo: inicios de sesión, cambios, accesos denegados y exportaciones.',
-                'tags' => ['auditoría', 'registro', 'seguridad', 'accesos', 'cambios', 'exportar', 'login'],
+                'tags' => ['auditoría', 'registro', 'seguridad', 'accesos', 'cambios', 'exportar', 'login', 'por área'],
                 'secciones' => [
                     ['titulo' => 'Leer la pantalla', 'pasos' => [
                         'Las tarjetas de arriba resumen el día: eventos, usuarios activos, inicios fallidos, accesos denegados y cambios de seguridad. Haz clic en una para filtrar.',
                         'Los atajos «Hoy», «7 días», «30 días» y «Todo» cambian el período; los filtros permiten afinar por usuario, módulo, acción y resultado.',
                         'Las filas en rojo son intentos fallidos o accesos denegados; conviene revisarlos.',
+                        'Si no tienes el permiso completo («auditoria.ver») pero sí tienes «auditoria.ver_area», solo ves lo que hizo el personal de tu propia área: tarjetas, filtros, lista y exportación quedan limitados a esa área.',
                     ]],
                     ['titulo' => 'Ver el detalle', 'pasos' => [
                         'Abre un evento para ver la comparación antes / después de un cambio, la dirección IP y el historial completo de ese registro.',
